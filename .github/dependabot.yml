@@ -45,6 +45,10 @@ updates:
       # Java 21, Node 22 y nginx estable están fijados por el plan maestro: solo minors/patches.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # En nginx las minors impares son mainline (1.31 = tag mainline); el plan fija la rama estable
+      # (1.30 = tag stable). La próxima estable será 1.32 (PR #6).
+      - dependency-name: 'nginxinc/nginx-unprivileged'
+        versions: ['>= 1.31, < 1.32']
     commit-message:
       prefix: 'chore(deps)'
 

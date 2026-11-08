@@ -183,7 +183,12 @@ export function filasBitacora(md) {
 
 export function categoriaBitacora(f) {
   const t = `${f.que} ${f.causa}`;
-  if (/^Gate de juicio|CAMBIOS SOLICITADOS|Revisión PR/i.test(f.que)) return 'gate de juicio';
+  if (
+    /^(Gate de juicio|revisor:)|CAMBIOS SOLICITADOS|Revisión PR|merge-si-verde. rechazó/i.test(
+      f.que,
+    )
+  )
+    return 'gate de juicio';
   if (/CodeQL/.test(t)) return 'CodeQL';
   if (/semantic-title/.test(t)) return 'semantic-title';
   if (/compose|worktree/i.test(t) && /paralelo|colisi|comparten|mismo proyecto/i.test(t))

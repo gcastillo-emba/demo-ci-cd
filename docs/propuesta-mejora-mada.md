@@ -45,6 +45,7 @@ Origen: el clasificador del modo auto bloqueó `gh pr comment`/`gh pr edit` del 
 - En F0, agregar a `.claude/settings.json` (versionado, no `settings.local.json`) reglas `allow` mínimas y acotadas: `gh pr comment`, `gh pr edit --add-label revisor:aprobado|seguridad:ok`, `gh pr view`, `gh pr checks`, `gh api` de solo lectura sobre el repo.
 - Nunca `gh pr merge` (lo bloquea `guard-git-push`; el merge es de `merge-si-verde.mjs`).
 - La checklist de F0 incluye un **ensayo** del gate de juicio sobre un PR de prueba antes de F2.
+- `revisor` y `seguridad` se lanzan recién cuando `ci-ok` arrancó en el SHA de cabecera: las etiquetas anteriores a ese momento no cuentan y `merge-si-verde` las rechaza (fila 53, PR #21). La skill `revisar-pr` debe esperar ese arranque.
 
 ### 2.3 Crear la capa `.claude/` antes de la sesión orquestadora
 
@@ -52,7 +53,7 @@ Origen: subagentes no disponibles a mitad de sesión (fila 8). La capa (agentes,
 
 ### 2.4 Numeración de la bitácora con PRs en paralelo
 
-Origen: con varios PRs abiertos a la vez, cada uno agrega filas "al final" con el siguiente número que ve en su rama; los números chocan al fusionar (C4 terminó usando 35–42 y las filas de F6, escritas como 42–48, hubo que renumerarlas a 43–49 al rebasar), y algunas fallas quedaron sin registrar hasta F6 (`.mada/pendientes-bitacora.md`).
+Origen: con varios PRs abiertos a la vez, cada uno agrega filas "al final" con el siguiente número que ve en su rama; los números chocan al fusionar (C4 terminó usando 35–42 y el triage de Dependabot 43–45; las filas de F6, escritas como 42–48, se renumeraron dos veces al rebasar, primero a 43–49 y luego a 46–52), y algunas fallas quedaron sin registrar hasta F6 (`.mada/pendientes-bitacora.md`).
 
 Propuesta (elegir una en el próximo F0):
 

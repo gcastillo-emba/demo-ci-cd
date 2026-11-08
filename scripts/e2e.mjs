@@ -71,6 +71,9 @@ export function main(argv = process.argv.slice(2)) {
       exec(p.down);
     } else if (p.up) {
       console.log('■ [e2e] --keep: el stack sigue arriba (docker compose down -v para bajarlo).');
+      console.log(
+        '  Aviso: el candado se libera; otro worktree podría reconstruir encima del stack.',
+      );
     }
     release();
   }

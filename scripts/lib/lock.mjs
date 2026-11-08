@@ -55,10 +55,8 @@ function readOwner(path) {
 /** ¿El candado existente está abandonado (proceso muerto o más viejo que staleMs)? */
 export function isStale(path, staleMs) {
   const info = readOwner(path);
-  if (info) {
-    if (!pidAlive(info.pid)) return true;
-    return Date.now() - Date.parse(info.since) > staleMs;
-  }
+  // Con dueño legible solo cuenta si el proceso murió; la antigüedad se usa solo sin owner.json.
+  if (info) return !pidAlive(info.pid);
   try {
     return Date.now() - statSync(path).mtimeMs > staleMs;
   } catch {

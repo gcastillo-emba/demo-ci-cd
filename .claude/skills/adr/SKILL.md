@@ -7,7 +7,7 @@ description: Crea un Architecture Decision Record (ADR) numerado en docs/adr/ co
 
 ## Cuándo crear un ADR
 
-- Desviación del stack o de la arquitectura decidida (plan maestro §3).
+- Desviación del stack o de la arquitectura decidida (sección "Decisiones técnicas clave" de docs/plan-maestro.md).
 - Desviación consciente de la metodología, como el merge por agente (ADR-004).
 - Decisión con trade-offs que otra persona cuestionaría en seis meses.
 - Un supuesto que no cabe en el `design.md` de un único cambio porque afecta a varios.

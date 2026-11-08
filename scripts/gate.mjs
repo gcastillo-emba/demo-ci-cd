@@ -2,12 +2,14 @@
 // Gate mecánico local (MADA-MB). Uso:
 //   node scripts/gate.mjs [--rapido] [--e2e] [--fail-fast]
 // Corre los pasos base y agrega los opcionales solo si su carpeta/script existe, así el mismo
-// gate crece con el repo (F3+: backend, contrato, frontend, evals, e2e) sin cambiar su interfaz.
+// gate crece con el repo sin cambiar su interfaz. Orden: spec · hooks · scripts · format ·
+// contract (api:lint, api:check) · backend (--rapido → backend:test:fast, si no backend:verify) ·
+// frontend (lint, typecheck, test) · evals · e2e (solo con --e2e). Lo que falte se omite.
 // Escribe .gate/last-run.json y, ante fallas, agrega líneas a .mada/fallas.jsonl.
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { run, capture, mvnw, commandLine } from './lib/run.mjs';
+import { run, capture, commandLine } from './lib/run.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -45,21 +47,33 @@ export function buildSteps(flags, root = ROOT) {
     npm('format', 'run', 'format:check'),
   ];
 
+  // Contrato: lint de OpenAPI + cliente TS generado sin drift.
+  if (existsSync(at('api/openapi.yaml'))) {
+    for (const s of ['api:lint', 'api:check']) {
+      if (hasScript(rootPkg, s)) steps.push(npm(`contract:${s.split(':')[1]}`, 'run', s));
+    }
+  }
+  // Backend: --rapido omite los IT (Testcontainers); sin flag, verify completo con JaCoCo.
   if (existsSync(at('backend/pom.xml'))) {
-    const args = flags.rapido ? ['-DskipITs', 'verify'] : ['verify'];
-    steps.push({ id: 'backend', cmd: 'mvnw', args, exec: () => mvnw(args) });
+    const script = flags.rapido ? 'backend:test:fast' : 'backend:verify';
+    if (hasScript(rootPkg, script)) steps.push(npm('backend', 'run', script));
   }
-  if (existsSync(at('api/openapi.yaml')) && hasScript(rootPkg, 'api:check')) {
-    steps.push(npm('contract', 'run', 'api:check'));
-  }
+  // Frontend: solo los scripts que el workspace define (y su alias en el package.json raíz).
   const frontendPkg = at('frontend/package.json');
   if (existsSync(frontendPkg)) {
     for (const s of ['lint', 'typecheck', 'test']) {
-      if (hasScript(frontendPkg, s)) steps.push(npm(`frontend:${s}`, 'run', s, '-w', 'frontend'));
+      if (hasScript(frontendPkg, s) && hasScript(rootPkg, `frontend:${s}`)) {
+        steps.push(npm(`frontend:${s}`, 'run', `frontend:${s}`));
+      }
     }
   }
-  if (hasScript(rootPkg, 'evals')) steps.push(npm('evals', 'run', 'evals'));
-  if (flags.e2e) steps.push(npm('e2e', 'run', 'e2e'));
+  if (hasScript(rootPkg, 'evals') && existsSync(at('scripts/evals.mjs'))) {
+    steps.push(npm('evals', 'run', 'evals'));
+  }
+  // E2E (compose + Playwright): solo con --e2e.
+  if (flags.e2e && hasScript(rootPkg, 'e2e') && existsSync(at('scripts/e2e.mjs'))) {
+    steps.push(npm('e2e', 'run', 'e2e'));
+  }
 
   return steps;
 }

@@ -2,6 +2,8 @@
 // Node >= 18.20.2 rechaza ejecutar .cmd/.bat con shell:false en Windows (CVE-2024-27980, EINVAL)
 // y la ruta del repo puede contener espacios; por eso usamos shell:true citando cada argumento.
 import { spawnSync, spawn } from 'node:child_process';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const isWin = process.platform === 'win32';
 
@@ -47,8 +49,38 @@ export function runAsync(cmd, args = [], opts = {}) {
   });
 }
 
-/** Wrapper de Maven: usa mvnw.cmd en Windows y ./mvnw en el resto. */
+/**
+ * Lanza un proceso de larga duración y devuelve el ChildProcess (para leer su salida o detenerlo).
+ * En Unix se crea en su propio grupo de procesos para poder matar el árbol con killTree().
+ */
+export function start(cmd, args = [], opts = {}) {
+  return spawn(commandLine(cmd, args), { shell: true, detached: !isWin, ...opts });
+}
+
+/** Detiene un proceso lanzado con start() junto con sus hijos (shell → mvnw → java, etc.). */
+export function killTree(child) {
+  if (!child?.pid || child.exitCode !== null) return;
+  if (isWin) {
+    spawnSync(`taskkill /pid ${child.pid} /T /F`, { shell: true, stdio: 'ignore' });
+  } else {
+    try {
+      process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      child.kill('SIGTERM');
+    }
+  }
+}
+
+/**
+ * Wrapper de Maven: usa mvnw.cmd en Windows y ./mvnw en el resto, siempre con ruta absoluta
+ * (con NoDefaultCurrentDirectoryInExePath=1, cmd.exe no busca en el directorio actual; bitácora #12).
+ */
+export function mvnwCommand(win = isWin) {
+  const backendDir = fileURLToPath(new URL('../../backend/', import.meta.url));
+  return { cmd: join(backendDir, win ? 'mvnw.cmd' : 'mvnw'), cwd: backendDir };
+}
+
 export function mvnw(args, opts = {}) {
-  const cmd = isWin ? 'mvnw.cmd' : './mvnw';
-  return run(cmd, args, { cwd: new URL('../../backend/', import.meta.url), ...opts });
+  const { cmd, cwd } = mvnwCommand();
+  return run(cmd, args, { cwd, ...opts });
 }

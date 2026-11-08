@@ -12,6 +12,42 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
 
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      backend:
+        patterns: ['*']
+    ignore:
+      # Majors de Spring Boot (parent y starters) se evalúan a mano con un ADR.
+      - dependency-name: 'org.springframework.boot:*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'org.openapitools:openapi-generator-maven-plugin'
+        update-types: ['version-update:semver-major']
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      docker-images:
+        patterns: ['*']
+    ignore:
+      # Java 21, Node 22 y nginx estable están fijados por el plan maestro: solo minors/patches.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+    commit-message:
+      prefix: 'chore(deps)'
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -21,5 +57,3 @@ updates:
         patterns: ['*']
     commit-message:
       prefix: 'chore(deps)'
-
-  # F3: agregar package-ecosystem maven (directory /backend), agrupado, ignorando majors de Spring Boot.

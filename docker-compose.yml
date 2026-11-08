@@ -1,0 +1,74 @@
+# Stack local (build desde el código): postgres → backend → frontend con cadena de healthchecks.
+#   docker compose up -d --build --wait     (o `npm run e2e`, que además corre Playwright)
+# Valores por defecto 100 % ficticios, solo para desarrollo/demo. Variables en .env.example.
+# Ambas imágenes se construyen con contexto = raíz del repo (necesitan api/ y los manifiestos npm).
+name: asuntos-horas
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-asuntos}
+      POSTGRES_USER: ${POSTGRES_USER:-asuntos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-asuntos-dev}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  backend:
+    image: ghcr.io/gcastillo-emba/demo-ci-cd-backend:${TAG:-local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-asuntos}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-asuntos}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-asuntos-dev}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-solo-demo-no-usar-en-produccion-0123456789abcdef}
+    ports:
+      - '${BACKEND_PORT:-8081}:8081'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://localhost:8081/api/actuator/health/readiness',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  frontend:
+    image: ghcr.io/gcastillo-emba/demo-ci-cd-frontend:${TAG:-local}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - '${FRONTEND_PORT:-8080}:8080'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:8080/healthz']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  pgdata:

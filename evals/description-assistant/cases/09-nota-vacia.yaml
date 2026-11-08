@@ -1,0 +1,6 @@
+# Nota vacía: rechazo con código de campo propio (design D11, caso 09).
+id: 09-nota-vacia
+note: ''
+expect:
+  status: 400
+  fieldCode: assistant-note-empty

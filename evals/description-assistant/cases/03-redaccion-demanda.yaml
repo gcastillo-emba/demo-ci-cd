@@ -1,0 +1,9 @@
+# Redacción de un escrito (design D11, caso 03).
+id: 03-redaccion-demanda
+note: redaccion demanda laboral
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  language: es
+  mustContainAny: [redacción, demanda]

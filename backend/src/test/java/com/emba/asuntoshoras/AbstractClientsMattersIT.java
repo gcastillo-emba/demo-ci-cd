@@ -31,6 +31,8 @@ public abstract class AbstractClientsMattersIT extends AbstractIT {
 
   @BeforeEach
   void cleanClientsAndMatters() {
+    // Los registros de horas (add-time-entries) referencian asuntos: se borran primero.
+    jdbc.update("DELETE FROM time_entries");
     jdbc.update("DELETE FROM matters");
     jdbc.update("DELETE FROM clients");
     jdbc.update("DELETE FROM matter_code_seq");

@@ -1,6 +1,7 @@
 package com.emba.asuntoshoras.adapters.in.web;
 
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -65,8 +66,17 @@ public class ProblemDetailsAdvice extends ResponseEntityExceptionHandler {
         .map(
             entry -> {
               log.info("Error de dominio code={}", ex.code());
+              if (ex instanceof InvalidValueException invalid) {
+                // Misma forma que la Bean Validation: 400 validation-error con errors[].
+                return ResponseEntity.status(entry.status())
+                    .body(
+                        validationProblem(
+                            List.of(
+                                new Problems.FieldMessage(invalid.field(), invalid.getMessage()))));
+              }
               ProblemDetail problem =
                   Problems.of(entry.status(), ex.code(), entry.title(), ex.getMessage());
+              ex.properties().forEach(problem::setProperty);
               return ResponseEntity.status(entry.status()).body(problem);
             })
         .orElseGet(

@@ -7,6 +7,17 @@ import com.emba.asuntoshoras.domain.matter.MatterNotFoundException;
 import com.emba.asuntoshoras.domain.shared.DomainException;
 import com.emba.asuntoshoras.domain.shared.ForbiddenException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
+import com.emba.asuntoshoras.domain.timeentry.ConcurrentModificationException;
+import com.emba.asuntoshoras.domain.timeentry.DailyHoursExceededException;
+import com.emba.asuntoshoras.domain.timeentry.EditWindowExpiredException;
+import com.emba.asuntoshoras.domain.timeentry.EntryNotPendingException;
+import com.emba.asuntoshoras.domain.timeentry.FutureDateException;
+import com.emba.asuntoshoras.domain.timeentry.HoursInvalidIncrementException;
+import com.emba.asuntoshoras.domain.timeentry.HoursOutOfRangeException;
+import com.emba.asuntoshoras.domain.timeentry.MatterClosedException;
+import com.emba.asuntoshoras.domain.timeentry.NotEntryOwnerException;
+import com.emba.asuntoshoras.domain.timeentry.RejectionReasonRequiredException;
+import com.emba.asuntoshoras.domain.timeentry.TimeEntryNotFoundException;
 import com.emba.asuntoshoras.domain.user.InvalidCredentialsException;
 import com.emba.asuntoshoras.domain.user.UserNotFoundException;
 import java.util.Map;
@@ -33,7 +44,7 @@ public class ProblemCatalog {
               UserNotFoundException.class,
               new Entry(HttpStatus.NOT_FOUND, "Usuario no encontrado")),
           Map.entry(
-              InvalidValueException.class, new Entry(HttpStatus.BAD_REQUEST, "Valor inválido")),
+              InvalidValueException.class, new Entry(HttpStatus.BAD_REQUEST, "Solicitud inválida")),
           Map.entry(
               ForbiddenException.class,
               new Entry(HttpStatus.FORBIDDEN, "Acción no permitida para su rol")),
@@ -48,7 +59,41 @@ public class ProblemCatalog {
               new Entry(HttpStatus.CONFLICT, "Identificación tributaria ya registrada")),
           Map.entry(
               MatterAlreadyClosedException.class,
-              new Entry(HttpStatus.CONFLICT, "El asunto ya está cerrado")));
+              new Entry(HttpStatus.CONFLICT, "El asunto ya está cerrado")),
+          // add-time-entries (design D6)
+          Map.entry(
+              TimeEntryNotFoundException.class,
+              new Entry(HttpStatus.NOT_FOUND, "Recurso no encontrado")),
+          Map.entry(
+              HoursInvalidIncrementException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Incremento de horas inválido")),
+          Map.entry(
+              HoursOutOfRangeException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Horas fuera de rango")),
+          Map.entry(
+              DailyHoursExceededException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Límite diario de horas superado")),
+          Map.entry(
+              FutureDateException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Fecha de trabajo futura")),
+          Map.entry(
+              MatterClosedException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "El asunto está cerrado")),
+          Map.entry(
+              EditWindowExpiredException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Ventana de edición vencida")),
+          Map.entry(
+              EntryNotPendingException.class,
+              new Entry(HttpStatus.CONFLICT, "El registro ya no está pendiente")),
+          Map.entry(
+              ConcurrentModificationException.class,
+              new Entry(HttpStatus.CONFLICT, "El registro cambió")),
+          Map.entry(
+              NotEntryOwnerException.class,
+              new Entry(HttpStatus.FORBIDDEN, "El registro no te pertenece")),
+          Map.entry(
+              RejectionReasonRequiredException.class,
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Motivo de rechazo obligatorio")));
 
   /** Entrada exacta o, en su defecto, la de la superclase más cercana. */
   public Optional<Entry> find(Class<?> exceptionType) {

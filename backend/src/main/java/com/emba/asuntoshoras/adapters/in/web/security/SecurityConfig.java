@@ -74,6 +74,10 @@ public class SecurityConfig {
                         "/api/time-entries/*/approve",
                         "/api/time-entries/*/reject")
                     .hasRole(PARTNER_ROLE)
+                    // Tablero (add-hours-dashboard, Supuesto 11): ambos roles, sin 403; el alcance
+                    // (todo para el Socio, lo propio para el Abogado) se aplica en el servicio.
+                    .requestMatchers(HttpMethod.GET, "/api/dashboard/summary")
+                    .hasAnyRole(PARTNER_ROLE, LAWYER_ROLE)
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

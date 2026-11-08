@@ -1,6 +1,7 @@
 package com.emba.asuntoshoras.adapters.in.web;
 
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.DomainValidationException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.validation.ConstraintViolation;
@@ -73,6 +74,14 @@ public class ProblemDetailsAdvice extends ResponseEntityExceptionHandler {
                         validationProblem(
                             List.of(
                                 new Problems.FieldMessage(invalid.field(), invalid.getMessage()))));
+              }
+              if (ex instanceof DomainValidationException validation) {
+                return ResponseEntity.status(entry.status())
+                    .body(
+                        validationProblem(
+                            validation.violations().stream()
+                                .map(v -> new Problems.FieldMessage(v.field(), v.message()))
+                                .toList()));
               }
               ProblemDetail problem =
                   Problems.of(entry.status(), ex.code(), entry.title(), ex.getMessage());

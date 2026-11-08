@@ -1,0 +1,82 @@
+# Release (ADR-003): con un tag v* re-etiqueta las imágenes sha-<short> ya publicadas por CD
+# (mismo digest, sin rebuild), genera las notas con git-cliff y crea la release de GitHub.
+# El push del tag lo hace el humano (el hook guard-git-push bloquea pushes de tags del agente).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+    env:
+      TAG: ${{ github.ref_name }}
+      REGISTRY_PREFIX: ghcr.io/gcastillo-emba/demo-ci-cd
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verificar que el tag apunta a un commit de main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::El tag $TAG ($GITHUB_SHA) no es ancestro de origin/main."
+            exit 1
+          fi
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-etiquetar imágenes sha-<short> → tag y latest-stable
+        run: |
+          for image in backend frontend; do
+            ref="$REGISTRY_PREFIX-$image"
+            echo "▶ $ref:sha-$SHORT_SHA → $TAG, latest-stable"
+            docker buildx imagetools inspect "$ref:sha-$SHORT_SHA" > /dev/null
+            docker buildx imagetools create \
+              --tag "$ref:$TAG" \
+              --tag "$ref:latest-stable" \
+              "$ref:sha-$SHORT_SHA"
+          done
+
+      - name: Notas de la release (git-cliff)
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Crear la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets=(docker-compose.demo.yml)
+          if [ -f docs/runbook.md ]; then assets+=(docs/runbook.md); fi
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file RELEASE_NOTES.md \
+            "${assets[@]}"

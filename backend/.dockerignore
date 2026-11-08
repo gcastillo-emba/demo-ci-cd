@@ -1,0 +1,8 @@
+# Solo aplica si se construye con contexto backend/ (no es el caso por defecto: compose y CI usan
+# la raíz del repo y el .dockerignore raíz). Se mantiene por si alguien hace `docker build backend`.
+target
+.idea
+*.iml
+*.log
+.env
+.env.*

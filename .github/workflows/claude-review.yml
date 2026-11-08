@@ -1,0 +1,70 @@
+# Revisión consultiva de PRs con Claude (ADR-003). INERTE salvo que existan ambos:
+#   - variable de repo CLAUDE_REVIEW_ENABLED = 'true'
+#   - secreto ANTHROPIC_API_KEY (hoy no provisto: bitácora #2)
+# No es un check requerido: el gate de juicio formal es el agente `revisor` (revisor:aprobado).
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: claude-review
+    if: vars.CLAUDE_REVIEW_ENABLED == 'true' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Guard del secreto
+        id: guard
+        env:
+          K: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$K" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY no está configurado: la revisión con Claude se omite."
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cargar el prompt del revisor
+        id: prompt
+        if: steps.guard.outputs.ok == 'true'
+        run: |
+          delim="PROMPT_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+          {
+            echo "text<<$delim"
+            cat .github/prompts/revisor.md
+            echo
+            echo "Repositorio: $GITHUB_REPOSITORY. PR: #$PR_NUMBER."
+            echo "Publica el resultado como un único comentario en el PR con gh pr comment."
+            echo "$delim"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Revisión con Claude
+        if: steps.guard.outputs.ok == 'true'
+        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: ${{ steps.prompt.outputs.text }}
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*)"

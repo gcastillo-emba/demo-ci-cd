@@ -1,0 +1,59 @@
+# Evals del asistente de descripciones (C4) contra el modelo real. Solo manual.
+# INERTE sin el secreto ANTHROPIC_API_KEY (hoy no provisto: bitácora #2); el CI corre las evals
+# con el adaptador simulado en el job `evals` de ci.yml.
+name: Evals (modelo real)
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Modelo a evaluar (vacío = el configurado por defecto en el backend)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  evals-real:
+    name: evals-real
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Guard del secreto
+        id: guard
+        env:
+          K: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$K" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY no está configurado: las evals con el modelo real se omiten."
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.guard.outputs.ok == 'true'
+        run: npm ci
+      - name: Evals con el proveedor Anthropic
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          APP_ASSISTANT_PROVIDER: anthropic
+          APP_ASSISTANT_MODEL: ${{ inputs.model }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run evals

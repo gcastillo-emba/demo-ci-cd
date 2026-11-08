@@ -1,0 +1,27 @@
+# Lint del contrato (npm run api:lint). Un gate mecánico: no relajar reglas sin ADR.
+extends:
+  - recommended
+
+rules:
+  operation-operationId: error
+  no-server-example.com: off
+  # Page se define en F3 para que C1–C4 lo reutilicen; avisar, no fallar.
+  no-unused-components: warn
+
+  # Toda respuesta 4xx/5xx DEBE declarar application/problem+json (RFC 9457) y solo ese tipo.
+  rule/error-responses-problem-json:
+    subject:
+      type: MediaTypesMap
+    where:
+      - subject:
+          type: Response
+          matchParentKeys: /^[45]\d\d$/
+        assertions:
+          defined: true
+    assertions:
+      required:
+        - application/problem+json
+      enum:
+        - application/problem+json
+    message: Las respuestas 4xx/5xx deben usar solo application/problem+json (RFC 9457).
+    severity: error

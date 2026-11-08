@@ -141,7 +141,10 @@ export function evaluarVeredicto(comentarios, sha) {
       ASOCIACIONES_CONFIABLES.includes(String(c.authorAssociation ?? '').toUpperCase()),
   );
   const ultimo = veredictos[veredictos.length - 1];
-  const ok = ultimo && ultimo.body.includes(MARCA_VEREDICTO) && citaSha(ultimo.body, sha);
+  const primeraLinea = ultimo
+    ? (ultimo.body.split(String.fromCharCode(10)).find((l) => l.trim() !== '') ?? '').trim()
+    : '';
+  const ok = ultimo && primeraLinea.startsWith(MARCA_VEREDICTO) && citaSha(ultimo.body, sha);
   return ok
     ? []
     : [

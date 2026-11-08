@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: Asuntos & Horas API
+  version: 0.1.0
+  summary: Contrato único (API-first) del POC Asuntos & Horas.
+  description: |
+    Contrato OpenAPI del POC "Asuntos & Horas" (MADA-MB). Es la única fuente de verdad:
+    el backend implementa las interfaces generadas y el frontend usa el cliente tipado
+    generado en `frontend/src/api/generated/schema.ts`.
+
+    - Todas las rutas viven bajo `/api`.
+    - Autenticación con JWT HS256 (`Authorization: Bearer <token>`) en todas las operaciones,
+      salvo `login`.
+    - Errores en `application/problem+json` (RFC 9457) con `type`
+      `https://asuntos-horas.example/problems/{code}`, `title` y `detail` en español y `code`
+      estable en inglés.
+    - Datos 100 % sintéticos.
+
+    Walking skeleton (F3): `login`, `/me` y `/features`. Las capacidades C1–C4 agregan rutas,
+    etiquetas y esquemas en sus cambios OpenSpec.
+  license:
+    name: Uso interno POC (datos sintéticos)
+    identifier: LicenseRef-POC
+servers:
+  - url: /
+    description: Mismo origen (nginx o el proxy de Vite reenvían /api al backend).
+tags:
+  - name: auth
+    description: Autenticación y sesión del usuario.
+  - name: system
+    description: Información del sistema y feature flags.
+security:
+  - bearerAuth: []
+paths:
+  /api/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Iniciar sesión
+      description: Valida email y contraseña y devuelve un access token JWT con vigencia de 2 horas.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: socia@asuntos.test
+              password: Demo2026!
+      responses:
+        '200':
+          description: Credenciales válidas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Credenciales inválidas (`code` = `invalid-credentials`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/invalid-credentials
+                title: Credenciales inválidas
+                status: 401
+                detail: El email o la contraseña no son correctos.
+                code: invalid-credentials
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Usuario autenticado
+      description: Devuelve el usuario dueño del token.
+      responses:
+        '200':
+          description: Usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/features:
+    get:
+      tags: [system]
+      operationId: getFeatures
+      summary: Feature flags
+      description: Feature flags visibles para la interfaz.
+      responses:
+        '200':
+          description: Estado de los feature flags.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Features'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT HS256 emitido por `login` (claims `sub`, `email`, `role`; vigencia 2 h).
+  responses:
+    Unauthorized:
+      description: Falta el token o no es válido (`code` = `unauthenticated`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/unauthenticated
+            title: No autenticado
+            status: 401
+            detail: Debes iniciar sesión para acceder a este recurso.
+            code: unauthenticated
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+    ValidationError:
+      description: La solicitud no cumple las validaciones (`code` = `validation-error`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/validation-error
+            title: Solicitud inválida
+            status: 400
+            detail: La solicitud tiene campos inválidos.
+            code: validation-error
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+            errors:
+              - field: email
+                message: Debe ser un email válido.
+    InternalError:
+      description: Error inesperado del servidor (`code` = `internal-error`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Role:
+      type: string
+      description: Rol del usuario. `PARTNER` = Socio, `LAWYER` = Abogado.
+      enum: [PARTNER, LAWYER]
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 128
+    LoginResponse:
+      type: object
+      additionalProperties: false
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT HS256.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          format: int32
+          description: Segundos de vigencia del token (7200 = 2 h).
+          examples: [7200]
+        user:
+          $ref: '#/components/schemas/User'
+    Features:
+      type: object
+      additionalProperties: false
+      required: [descriptionAssistant]
+      properties:
+        descriptionAssistant:
+          type: boolean
+          description: Asistente de descripción (C4) habilitado.
+    Problem:
+      type: object
+      description: Detalle de error RFC 9457.
+      required: [type, title, status, detail, code, traceId]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: '`https://asuntos-horas.example/problems/{code}`.'
+        title:
+          type: string
+          description: Resumen legible en español.
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: Explicación en español de esta ocurrencia.
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          description: Código estable en inglés (kebab-case).
+          pattern: '^[a-z][a-z0-9-]*$'
+        traceId:
+          type: string
+          description: Identificador de traza para correlacionar con los logs.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+          description: Mensaje en español.
+    Page:
+      type: object
+      description: |
+        Sobre genérico de paginación. Las capacidades lo especializan con
+        `allOf: [{ $ref: Page }, { properties: { items: { items: { $ref: X } } } }]`.
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items: {}
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Página (base 0).
+        size:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0

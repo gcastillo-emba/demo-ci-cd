@@ -1,0 +1,43 @@
+# git-cliff: notas de release desde Conventional Commits, con secciones en español.
+# Uso local: npx git-cliff --latest --strip header   (CI: release.yml)
+
+[changelog]
+header = """
+# Registro de cambios\n
+"""
+body = """
+{% if version %}\
+## {{ version | trim_start_matches(pat="v") }} — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## Sin publicar
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
+{% if commit.breaking %}[**rompe compatibilidad**] {% endif %}\
+{{ commit.message | upper_first }} ({{ commit.id | truncate(length=7, end="") }})\
+{% endfor %}
+{% endfor %}\n
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = false
+filter_commits = false
+tag_pattern = "v[0-9].*"
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^Merge ", skip = true },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Funcionalidades" },
+  { message = "^fix", group = "<!-- 1 -->Correcciones" },
+  { message = "^docs", group = "<!-- 2 -->Documentación" },
+  { message = "^ci", group = "<!-- 3 -->CI/CD" },
+  { message = "^(chore|build|refactor|test|perf)", group = "<!-- 4 -->Mantenimiento" },
+  { message = "^revert", group = "<!-- 4 -->Mantenimiento" },
+]

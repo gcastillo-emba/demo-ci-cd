@@ -26,7 +26,10 @@ const eventosOk = [
   labeled('revisor:aprobado', '2026-11-07T10:05:00Z'),
   labeled('seguridad:ok', '2026-11-07T10:06:00Z'),
 ];
-const veredicto = { body: `VEREDICTO: APROBADO\nCommit revisado: ${SHA.slice(0, 7)}` };
+const veredicto = {
+  authorAssociation: 'OWNER',
+  body: `VEREDICTO: APROBADO\nCommit revisado: ${SHA.slice(0, 7)}`,
+};
 const okRes = (eventos) => ({ status: 0, stdout: JSON.stringify([eventos]), stderr: '' });
 
 const base = (over = {}) => ({
@@ -120,25 +123,54 @@ test('falta el comentario de veredicto => rechazo', () => {
 });
 
 test('veredicto sin SHA => rechazo', () => {
-  assert.equal(evaluarVeredicto([{ body: 'VEREDICTO: APROBADO' }], SHA).length, 1);
+  assert.equal(
+    evaluarVeredicto([{ authorAssociation: 'OWNER', body: 'VEREDICTO: APROBADO' }], SHA).length,
+    1,
+  );
 });
 
 test('veredicto con SHA de otro commit => rechazo', () => {
-  assert.equal(evaluarVeredicto([{ body: 'VEREDICTO: APROBADO 1234567' }], SHA).length, 1);
+  assert.equal(
+    evaluarVeredicto([{ authorAssociation: 'OWNER', body: 'VEREDICTO: APROBADO 1234567' }], SHA)
+      .length,
+    1,
+  );
 });
 
 test('SHA sin la marca de veredicto => rechazo', () => {
   assert.equal(
-    evaluarVeredicto([{ body: `VEREDICTO: CAMBIOS SOLICITADOS ${SHA}` }], SHA).length,
+    evaluarVeredicto(
+      [{ authorAssociation: 'OWNER', body: `VEREDICTO: CAMBIOS SOLICITADOS ${SHA}` }],
+      SHA,
+    ).length,
     1,
   );
 });
 
 test('veredicto con SHA completo => ok', () => {
-  assert.deepEqual(evaluarVeredicto([{ body: `VEREDICTO: APROBADO (${SHA})` }], SHA), []);
+  assert.deepEqual(
+    evaluarVeredicto([{ authorAssociation: 'OWNER', body: `VEREDICTO: APROBADO (${SHA})` }], SHA),
+    [],
+  );
 });
 
 test('citaSha exige al menos 7 caracteres', () => {
   assert.equal(citaSha('abcdef', SHA), false);
   assert.equal(citaSha('abcdef1', SHA), true);
+});
+
+test('veredicto de autor sin permisos no cuenta', () => {
+  assert.equal(
+    evaluarVeredicto([{ authorAssociation: 'NONE', body: `VEREDICTO: APROBADO ${SHA}` }], SHA)
+      .length,
+    1,
+  );
+});
+
+test('un CAMBIOS SOLICITADOS posterior invalida el APROBADO anterior', () => {
+  const cs = [
+    { authorAssociation: 'OWNER', body: `VEREDICTO: APROBADO ${SHA}` },
+    { authorAssociation: 'OWNER', body: `VEREDICTO: CAMBIOS SOLICITADOS ${SHA}` },
+  ];
+  assert.equal(evaluarVeredicto(cs, SHA).length, 1);
 });

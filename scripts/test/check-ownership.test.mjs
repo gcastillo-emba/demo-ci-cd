@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { globToRegex, matchesAny, outsideAllowed, parseArgs } from '../check-ownership.mjs';
+import { matchGlob, matchesAny, outsideAllowed, parseArgs } from '../check-ownership.mjs';
+
+const globToRegex = (g) => ({ test: (f) => matchGlob(f, g) });
 
 test('** al final cubre cualquier profundidad', () => {
   const re = globToRegex('backend/**');

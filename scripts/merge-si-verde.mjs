@@ -124,17 +124,28 @@ export function citaSha(texto, sha) {
   return tokens.some((t) => full.startsWith(t.toLowerCase()));
 }
 
-/** Exige un comentario del PR con "VEREDICTO: APROBADO" y el SHA de cabecera. */
+export const ASOCIACIONES_CONFIABLES = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+/**
+ * Exige que el ÚLTIMO comentario de veredicto ("VEREDICTO: ...") de un autor con permisos
+ * (authorAssociation OWNER/MEMBER/COLLABORATOR) sea "VEREDICTO: APROBADO" y cite el SHA de cabecera.
+ * Un "CAMBIOS SOLICITADOS" posterior invalida un "APROBADO" anterior.
+ */
 export function evaluarVeredicto(comentarios, sha) {
   if (typeof sha !== 'string' || !/^[0-9a-f]{7,40}$/i.test(sha))
     return ['no se conoce el SHA de cabecera para verificar el veredicto (fail-closed)'];
-  const ok = (comentarios ?? []).some(
-    (c) => typeof c?.body === 'string' && c.body.includes(MARCA_VEREDICTO) && citaSha(c.body, sha),
+  const veredictos = (comentarios ?? []).filter(
+    (c) =>
+      typeof c?.body === 'string' &&
+      c.body.includes('VEREDICTO:') &&
+      ASOCIACIONES_CONFIABLES.includes(String(c.authorAssociation ?? '').toUpperCase()),
   );
+  const ultimo = veredictos[veredictos.length - 1];
+  const ok = ultimo && ultimo.body.includes(MARCA_VEREDICTO) && citaSha(ultimo.body, sha);
   return ok
     ? []
     : [
-        `falta un comentario con "${MARCA_VEREDICTO}" que cite el SHA de cabecera (${sha.slice(0, 7)})`,
+        `el último veredicto de un autor con permisos no es "${MARCA_VEREDICTO}" citando el SHA de cabecera (${sha.slice(0, 7)})`,
       ];
 }
 

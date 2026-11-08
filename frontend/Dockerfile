@@ -22,7 +22,7 @@ RUN npm ci --workspace frontend --include-workspace-root=false
 COPY frontend frontend
 RUN npm run build -w frontend
 
-FROM nginxinc/nginx-unprivileged:1.30-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 COPY --chown=nginx:nginx frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build --chown=nginx:nginx /workspace/frontend/dist /usr/share/nginx/html
 USER nginx

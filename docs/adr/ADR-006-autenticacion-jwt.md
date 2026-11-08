@@ -2,6 +2,7 @@
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-07
+- **Revisado:** 2026-11-08 (PR #14): enmienda sin cambio de decisión. Agrega validación del token, contraseñas de más de 72 bytes, secreto de demo en un único lugar, CSRF acotado a `/api/**`, rate limiting del login y anti-enumeración.
 - **Decisores:** humano + arquitecto
 - **Relacionado con:** ADR-001, ADR-005
 

@@ -1,6 +1,6 @@
 # Registro de decisiones de arquitectura (ADR)
 
-Cada decisión estructural del POC "Asuntos & Horas" queda como un ADR numerado. Se usa [`plantilla.md`](plantilla.md). Un ADR aceptado no se edita: se reemplaza por uno nuevo que lo declare en su estado.
+Cada decisión estructural del POC "Asuntos & Horas" queda como un ADR numerado. Se usa [`plantilla.md`](plantilla.md). Un ADR aceptado no cambia su decisión: si la decisión cambia, se reemplaza por uno nuevo que lo declare en su estado. Se admiten **enmiendas** que no cambian la decisión (precisiones de implementación, desviaciones documentadas, controles agregados), siempre con una línea `Revisado: AAAA-MM-DD (PR #N): <qué se enmendó>` en la cabecera. Las enmiendas también pasan por la skill `adr` (bitácora, fila 50).
 
 Numeración: `ADR-NNN-titulo-en-kebab-case.md`, correlativa, sin huecos. La skill `adr` asigna el siguiente número de forma automática.
 

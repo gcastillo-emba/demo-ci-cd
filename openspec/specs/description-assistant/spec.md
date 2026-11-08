@@ -8,19 +8,19 @@ Permitir que un Abogado obtenga, a partir de una nota informal, una sugerencia d
 
 ### Requirement: Indicador de funcionalidad expuesto en features
 
-El sistema SHALL (DEBE) exponer el indicador `description-assistant` como booleano en la respuesta de `GET /api/features` para cualquier usuario autenticado. El valor por defecto SHALL (DEBE) ser `false` en el perfil de producción y `true` en el perfil `demo`.
+El sistema SHALL (DEBE) exponer el indicador (clave de configuración `app.features.description-assistant`) como el booleano `descriptionAssistant` en la respuesta de `GET /api/features` para cualquier usuario autenticado. El valor por defecto SHALL (DEBE) ser `false` en el perfil de producción y `true` en el perfil `demo`.
 
 #### Scenario: Perfil demo con el asistente encendido
 
 - **GIVEN** (Dado) la aplicación arrancada con el perfil `demo` sin configuración adicional
 - **WHEN** (Cuando) un usuario autenticado llama a `GET /api/features`
-- **THEN** (Entonces) la respuesta es `200` y contiene `description-assistant: true`
+- **THEN** (Entonces) la respuesta es `200` y contiene `descriptionAssistant: true`
 
 #### Scenario: Perfil de producción con el asistente apagado
 
 - **GIVEN** (Dado) la aplicación arrancada con el perfil de producción sin configuración adicional
 - **WHEN** (Cuando) un usuario autenticado llama a `GET /api/features`
-- **THEN** (Entonces) la respuesta es `200` y contiene `description-assistant: false`
+- **THEN** (Entonces) la respuesta es `200` y contiene `descriptionAssistant: false`
 
 ### Requirement: Endpoint deshabilitado cuando el indicador está apagado
 
@@ -238,17 +238,17 @@ El endpoint de sugerencias SHALL NOT (NO DEBE) crear ni modificar registros de h
 
 ### Requirement: Botón visible solo con el asistente habilitado
 
-En el formulario "Registrar horas", la interfaz SHALL (DEBE) mostrar el botón "Sugerir descripción" solo cuando `GET /api/features` devuelve `description-assistant: true`, y SHALL NOT (NO DEBE) mostrarlo cuando devuelve `false`.
+En el formulario "Registrar horas", la interfaz SHALL (DEBE) mostrar el botón "Sugerir descripción" solo cuando `GET /api/features` devuelve `descriptionAssistant: true`, y SHALL NOT (NO DEBE) mostrarlo cuando devuelve `false`.
 
 #### Scenario: Indicador encendido
 
-- **GIVEN** (Dado) `GET /api/features` devuelve `description-assistant: true`
+- **GIVEN** (Dado) `GET /api/features` devuelve `descriptionAssistant: true`
 - **WHEN** (Cuando) un Abogado abre el formulario "Registrar horas"
 - **THEN** (Entonces) ve el botón "Sugerir descripción"
 
 #### Scenario: Indicador apagado
 
-- **GIVEN** (Dado) `GET /api/features` devuelve `description-assistant: false`
+- **GIVEN** (Dado) `GET /api/features` devuelve `descriptionAssistant: false`
 - **WHEN** (Cuando) un Abogado abre el formulario "Registrar horas"
 - **THEN** (Entonces) el botón "Sugerir descripción" no está presente en la página
 

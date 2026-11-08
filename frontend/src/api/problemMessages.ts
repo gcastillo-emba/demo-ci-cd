@@ -5,7 +5,12 @@ import {
   MAX_DAILY_HOURS,
   REJECTION_REASON_MAX,
 } from './hours';
-import { ApiProblem, errorMessage, GENERIC_ERROR_DETAIL } from './problem';
+import {
+  ApiProblem,
+  errorMessage,
+  GENERIC_ERROR_DETAIL,
+  TOO_MANY_REQUESTS_DETAIL,
+} from './problem';
 
 /**
  * Mensajes en español por `code` estable de Problem Details (design D9). El `detail` del servidor
@@ -20,6 +25,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   'method-not-allowed': 'La operación solicitada no está permitida.',
   'client-tax-id-taken': 'Ya existe un cliente con esa identificación tributaria.',
   'matter-already-closed': 'El asunto ya estaba cerrado.',
+  // Rate limiting del login en nginx (429, ADR-006).
+  'too-many-requests': TOO_MANY_REQUESTS_DETAIL,
   // C2 — registros de horas (design D6 y D8).
   'hours-invalid-increment': HOURS_INCREMENT_MESSAGE,
   'hours-out-of-range': HOURS_RANGE_MESSAGE,

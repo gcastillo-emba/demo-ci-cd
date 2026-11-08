@@ -1,9 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
-import { ABOGADO_STATE, SOCIA_STATE } from '../support/auth-files';
+import type { Page } from '@playwright/test';
+import { ABOGADO_STATE, expect, rolePage, SOCIA_STATE, test } from '../support/auth';
 import { createClient, createMatter, runId } from '../support/session';
-import { isolatedWorkDate, registerHours, rolePage, rowWith } from '../support/time-entries';
+import { isolatedWorkDate, registerHours, rowWith } from '../support/time-entries';
 
 // Evidencia visual de C2 (tarea 4.4). Fuera de la corrida por defecto: solo con
 // `npm run evidence -w e2e` (playwright.evidence.config.ts). Capturas en

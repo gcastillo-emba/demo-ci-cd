@@ -1,5 +1,4 @@
-import { expect, type Browser, type Page } from '@playwright/test';
-import { TOKEN_KEY } from './auth-files';
+import { expect, type Page } from '@playwright/test';
 
 // Utilidades E2E de C2 (add-time-entries). Datos 100 % sintéticos.
 
@@ -26,26 +25,6 @@ export function addDays(isoDate: string, days: number): string {
 export function isolatedWorkDate(): string {
   const daysBack = 400 + Math.floor(Math.random() * 2600);
   return addDays(todayInLaPaz(), -daysBack);
-}
-
-/**
- * Página con la sesión de un rol en un contexto propio (para pruebas con dos roles a la vez). Mismo
- * puente storageState → sessionStorage que el fixture de support/auth.ts.
- */
-export async function rolePage(browser: Browser, storageState: string): Promise<Page> {
-  const context = await browser.newContext({ storageState });
-  await context.addInitScript((key: string) => {
-    try {
-      const token = window.localStorage.getItem(key);
-      if (token !== null) {
-        window.sessionStorage.setItem(key, token);
-        window.localStorage.removeItem(key);
-      }
-    } catch {
-      // Almacenamiento no disponible: la prueba fallará al no ver la sesión.
-    }
-  }, TOKEN_KEY);
-  return context.newPage();
 }
 
 /** Registra horas desde "Registrar horas" y espera la confirmación. */

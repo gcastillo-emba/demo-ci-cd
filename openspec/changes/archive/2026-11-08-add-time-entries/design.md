@@ -88,7 +88,7 @@ Supuestos surgidos en la implementación (backend):
 
 Supuestos surgidos en la implementación (frontend y E2E):
 
-23. **Sesión E2E reutilizada por `storageState`**: un `globalSetup` inicia sesión una vez por rol (lo exige el rate limit de login de nginx, 5 req/min por IP). Los archivos de sesión se copiaron del PR del rate limit para que el merge no tenga conflicto; `e2e/.gitignore` ignora `.auth/`.
+23. **Sesión E2E reutilizada por `storageState`**: un `globalSetup` inicia sesión una vez por rol (lo exige el rate limit de login de nginx, 5 req/min por IP). Tras el rebase sobre `main` se usa el mecanismo canónico de `main` (`e2e/global-setup.ts`, fixture `support/auth.ts`); el puente storageState → sessionStorage vive solo en `installSessionBridge` de `support/auth.ts`, que reutilizan el fixture y `rolePage` (dos roles a la vez). `e2e/.auth/` se ignora en el `.gitignore` raíz.
 24. **Fecha aislada por corrida en el E2E**: se usa una fecha pasada al azar (entre 400 y unos 3000 días atrás) y las listas se filtran con `?from=&to=`, para que las horas de corridas previas no sumen al límite diario. Una colisión de fechas entre corridas (muy improbable) haría fallar la aserción "22,5 h".
 25. **Filtros de la UI**: "Mis registros" filtra por Estado y Desde/Hasta; "Aprobaciones" solo por Desde/Hasta (no hay filtro por abogado porque la API no lista usuarios). Con un rango invertido no se consulta la API y se muestra el error junto al campo.
 26. **`ApiProblem.extensions` guarda solo miembros numéricos**; el mensaje del límite diario cae al genérico si faltan `limitHours` o `alreadyLoggedHours`.

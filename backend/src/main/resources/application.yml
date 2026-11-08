@@ -64,6 +64,10 @@ logging:
   structured:
     format:
       console: ecs
+  level:
+    # El cliente HTTP del JDK nunca registra cuerpos ni encabezados (add-description-assistant D9).
+    jdk.httpclient: WARN
+    jdk.internal.httpclient: WARN
 
 app:
   jwt:
@@ -72,4 +76,14 @@ app:
     ttl: 2h
   time-zone: ${APP_TIME_ZONE:America/La_Paz}
   features:
+    # Apagado por defecto (producción); el perfil demo lo enciende (add-description-assistant S1).
     description-assistant: false
+  assistant:
+    # fake (determinista, sin red; por defecto y en CI) | anthropic (requiere ANTHROPIC_API_KEY).
+    provider: ${APP_ASSISTANT_PROVIDER:fake}
+    timeout: ${APP_ASSISTANT_TIMEOUT:8s}
+    anthropic:
+      # Vacío = modelo por defecto del adaptador (AppProperties.Anthropic.DEFAULT_MODEL).
+      model: ${APP_ASSISTANT_MODEL:}
+      max-tokens: 300
+      base-url: https://api.anthropic.com

@@ -2,6 +2,9 @@ package com.emba.asuntoshoras.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.emba.asuntoshoras.domain.assistant.AssistantNote;
+import com.emba.asuntoshoras.domain.assistant.AssistantUnavailableException;
+import com.emba.asuntoshoras.domain.assistant.FeatureDisabledException;
 import com.emba.asuntoshoras.domain.shared.DomainException;
 import com.emba.asuntoshoras.domain.shared.DomainValidationException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
@@ -141,5 +144,38 @@ class ProblemCatalogTest {
             assertThat(catalog.find(exception.getClass()))
                 .as(exception.code())
                 .hasValueSatisfying(e -> assertThat(e.status()).isEqualTo(status)));
+  }
+
+  /** add-description-assistant tarea 2.4: los slugs nuevos de C4 y su estado HTTP. */
+  @Test
+  void mapsAssistantSlugsToTheirStatus() {
+    assertThat(new FeatureDisabledException().code()).isEqualTo("feature-disabled");
+    assertThat(catalog.find(FeatureDisabledException.class))
+        .hasValueSatisfying(
+            e -> {
+              assertThat(e.status()).isEqualTo(HttpStatus.NOT_FOUND);
+              assertThat(e.title()).isEqualTo("Funcionalidad no disponible");
+            });
+    assertThat(new AssistantUnavailableException().code()).isEqualTo("assistant-unavailable");
+    assertThat(catalog.find(AssistantUnavailableException.class))
+        .hasValueSatisfying(
+            e -> {
+              assertThat(e.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+              assertThat(e.title()).isEqualTo("Asistente no disponible");
+            });
+  }
+
+  /** Tarea 2.4: los códigos de campo de la nota viajan como validation-error (400). */
+  @Test
+  void assistantNoteCodesAreValidationErrors() {
+    for (String raw : new String[] {"  ", "a".repeat(501)}) {
+      DomainValidationException exception =
+          org.assertj.core.api.Assertions.catchThrowableOfType(
+              DomainValidationException.class, () -> AssistantNote.of(raw));
+      assertThat(catalog.find(exception.getClass()))
+          .hasValueSatisfying(e -> assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST));
+      assertThat(exception.violations().get(0).code())
+          .isIn(AssistantNote.EMPTY_CODE, AssistantNote.TOO_LONG_CODE);
+    }
   }
 }

@@ -1,6 +1,7 @@
 # Evals del asistente de descripciones (C4) contra el modelo real. Solo manual.
 # INERTE sin el secreto ANTHROPIC_API_KEY (hoy no provisto: bitácora #2); el CI corre las evals
 # con el adaptador simulado en el job `evals` de ci.yml.
+# Scenario: Ejecución manual contra el modelo real
 name: Evals (modelo real)
 
 on:
@@ -19,7 +20,7 @@ jobs:
   evals-real:
     name: evals-real
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Guard del secreto
         id: guard
@@ -57,3 +58,11 @@ jobs:
           APP_ASSISTANT_MODEL: ${{ inputs.model }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npm run evals
+      - name: Subir reporte de evals
+        if: always() && steps.guard.outputs.ok == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: evals-real-report
+          path: backend/target/evals/
+          if-no-files-found: ignore
+          retention-days: 14

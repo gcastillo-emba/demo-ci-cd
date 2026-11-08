@@ -29,12 +29,21 @@ public class DomainValidationException extends DomainException {
     return violations;
   }
 
-  /** Error de un campo: nombre del campo y mensaje fijo en español. */
-  public record Violation(String field, String message) {
+  /**
+   * Error de un campo: nombre del campo, mensaje fijo en español y, opcionalmente, un código
+   * estable en inglés (kebab-case) que viaja en {@code errors[].code} (add-description-assistant,
+   * Supuesto 3). Sin código, el significado de {@code field} y {@code message} no cambia.
+   */
+  public record Violation(String field, String message, String code) {
 
     public Violation {
       Objects.requireNonNull(field, "field");
       Objects.requireNonNull(message, "message");
+    }
+
+    /** Violación sin código propio (C1–C3). */
+    public Violation(String field, String message) {
+      this(field, message, null);
     }
   }
 }

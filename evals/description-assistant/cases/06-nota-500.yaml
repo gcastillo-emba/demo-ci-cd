@@ -1,0 +1,10 @@
+# Nota de exactamente 500 caracteres: se acepta y la sugerencia cabe en 300 (design D11, caso 06).
+# La nota se arma repitiendo `pattern` y cortando en `length` caracteres.
+id: 06-nota-500
+noteFill:
+  pattern: 'reunion cliente revisar contrato arrendamiento redactar demanda laboral audiencia preliminar juzgado '
+  length: 500
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300

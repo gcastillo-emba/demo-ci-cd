@@ -594,6 +594,47 @@ h2 {
   font-size: 0.875rem;
 }
 
+/* C4 — asistente de descripción (design D10). */
+.assistant {
+  margin: 0 0 var(--space-4);
+}
+
+.assistant__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.assistant__counter--over {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.assistant__panel {
+  background: var(--color-info-bg);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+}
+
+.assistant__panel h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+/* Texto plano: se respeta tal cual y se parte si no tiene espacios. */
+.assistant__text {
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant__panel .form-actions {
+  margin-top: var(--space-3);
+}
+
 @media (max-width: 40rem) {
   .details div {
     grid-template-columns: 1fr;

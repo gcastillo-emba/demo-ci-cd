@@ -43,7 +43,9 @@ El repo `gcastillo-emba/demo-ci-cd` está vacío: solo `README.md` y un commit. 
   - APPROVED y REJECTED son estados terminales.
   - El seed de demo es un `R__` idempotente por capacidad, con fechas relativas (N ≥ 1), y solo se carga con el perfil `demo`.
 - **Errores**: RFC 9457. `type=https://asuntos-horas.example/problems/{slug}`; `title` y `detail` en español; `code` estable en inglés; `errors[]` para validación; `traceId`.
-  - Códigos HTTP: 400 validación · 401 · 403 rol o propiedad · 404 · 409 estado o concurrencia · 422 reglas de negocio.
+  - Códigos HTTP: 400 validación · 401 · 403 rol o propiedad · 404 · 405 método no ofrecido (`method-not-allowed`) · 409 estado o concurrencia · 422 reglas de negocio · 500 error inesperado (`internal-error`).
+  - Precedencia base cuando una petición incumple varias reglas: `401 > 403 > 400 > 404 > 409`. El `403` por rol se aplica con reglas por URL (antes de validar el cuerpo). Un método no ofrecido responde `405` antes de evaluar el rol. Las excepciones acordadas entre cambios están en `design.md` § Supuestos (S11) de `add-clients-matters`.
+  - Errores sin detalles internos: ningún Problem Details expone traza, SQL, nombres de clase ni el mensaje original de la excepción; un error no previsto responde `500 internal-error` con `detail` genérico en español y `traceId`.
 - **Seguridad**: JWT HS256 (Nimbus) con TTL de 2 h; usuarios de demo sintéticos con BCrypt; el token se guarda en sessionStorage (ADR). Los logs son ECS estructurados y el MDC solo lleva userId y requestId, nunca PII.
 - **C4**:
   - El puerto es `DescriptionAssistant`. El adaptador `fake` es determinista y es el default. El adaptador `anthropic` usa `java.net.http` con timeout.

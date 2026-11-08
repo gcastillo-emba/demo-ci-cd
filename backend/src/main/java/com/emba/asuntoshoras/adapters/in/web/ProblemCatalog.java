@@ -1,6 +1,11 @@
 package com.emba.asuntoshoras.adapters.in.web;
 
+import com.emba.asuntoshoras.domain.client.ClientNotFoundException;
+import com.emba.asuntoshoras.domain.client.ClientTaxIdTakenException;
+import com.emba.asuntoshoras.domain.matter.MatterAlreadyClosedException;
+import com.emba.asuntoshoras.domain.matter.MatterNotFoundException;
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.ForbiddenException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.emba.asuntoshoras.domain.user.InvalidCredentialsException;
 import com.emba.asuntoshoras.domain.user.UserNotFoundException;
@@ -20,13 +25,30 @@ public class ProblemCatalog {
   public record Entry(HttpStatus status, String title) {}
 
   private static final Map<Class<? extends DomainException>, Entry> ENTRIES =
-      Map.of(
-          InvalidCredentialsException.class,
-          new Entry(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"),
-          UserNotFoundException.class,
-          new Entry(HttpStatus.NOT_FOUND, "Usuario no encontrado"),
-          InvalidValueException.class,
-          new Entry(HttpStatus.BAD_REQUEST, "Valor inválido"));
+      Map.ofEntries(
+          Map.entry(
+              InvalidCredentialsException.class,
+              new Entry(HttpStatus.UNAUTHORIZED, "Credenciales inválidas")),
+          Map.entry(
+              UserNotFoundException.class,
+              new Entry(HttpStatus.NOT_FOUND, "Usuario no encontrado")),
+          Map.entry(
+              InvalidValueException.class, new Entry(HttpStatus.BAD_REQUEST, "Valor inválido")),
+          Map.entry(
+              ForbiddenException.class,
+              new Entry(HttpStatus.FORBIDDEN, "Acción no permitida para su rol")),
+          Map.entry(
+              ClientNotFoundException.class,
+              new Entry(HttpStatus.NOT_FOUND, "Recurso no encontrado")),
+          Map.entry(
+              MatterNotFoundException.class,
+              new Entry(HttpStatus.NOT_FOUND, "Recurso no encontrado")),
+          Map.entry(
+              ClientTaxIdTakenException.class,
+              new Entry(HttpStatus.CONFLICT, "Identificación tributaria ya registrada")),
+          Map.entry(
+              MatterAlreadyClosedException.class,
+              new Entry(HttpStatus.CONFLICT, "El asunto ya está cerrado")));
 
   /** Entrada exacta o, en su defecto, la de la superclase más cercana. */
   public Optional<Entry> find(Class<?> exceptionType) {

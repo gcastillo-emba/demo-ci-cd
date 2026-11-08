@@ -3,15 +3,22 @@ package com.emba.asuntoshoras.config;
 import com.emba.asuntoshoras.adapters.out.security.BCryptPasswordHasher;
 import com.emba.asuntoshoras.adapters.out.security.JwtTokenIssuer;
 import com.emba.asuntoshoras.application.port.in.AuthenticateUseCase;
+import com.emba.asuntoshoras.application.port.in.ClientUseCases;
 import com.emba.asuntoshoras.application.port.in.GetCurrentUserQuery;
 import com.emba.asuntoshoras.application.port.in.GetFeaturesQuery;
+import com.emba.asuntoshoras.application.port.in.MatterUseCases;
+import com.emba.asuntoshoras.application.port.out.ClientRepository;
 import com.emba.asuntoshoras.application.port.out.FeatureFlags;
+import com.emba.asuntoshoras.application.port.out.MatterCodeSequence;
+import com.emba.asuntoshoras.application.port.out.MatterRepository;
 import com.emba.asuntoshoras.application.port.out.PasswordHasher;
 import com.emba.asuntoshoras.application.port.out.TokenIssuer;
 import com.emba.asuntoshoras.application.port.out.UserRepository;
 import com.emba.asuntoshoras.application.service.AuthenticationService;
+import com.emba.asuntoshoras.application.service.ClientService;
 import com.emba.asuntoshoras.application.service.CurrentUserService;
 import com.emba.asuntoshoras.application.service.FeaturesService;
+import com.emba.asuntoshoras.application.service.MatterService;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,5 +57,19 @@ public class BeanConfig {
   @Bean
   GetFeaturesQuery getFeaturesQuery(FeatureFlags featureFlags) {
     return new FeaturesService(featureFlags);
+  }
+
+  @Bean
+  ClientUseCases clientUseCases(ClientRepository clients, Clock clock) {
+    return new ClientService(clients, clock);
+  }
+
+  @Bean
+  MatterUseCases matterUseCases(
+      MatterRepository matters,
+      ClientRepository clients,
+      MatterCodeSequence codeSequence,
+      Clock clock) {
+    return new MatterService(matters, clients, codeSequence, clock);
   }
 }

@@ -18,6 +18,19 @@ info:
 
     Walking skeleton (F3): `login`, `/me` y `/features`. Las capacidades C1–C4 agregan rutas,
     etiquetas y esquemas en sus cambios OpenSpec.
+
+    C1 (`add-clients-matters`): clientes y asuntos (etiquetas `clients` y `matters`).
+
+    Convenciones de error compartidas:
+
+    - Precedencia cuando una petición incumple varias reglas: `401 unauthenticated` >
+      `403 forbidden` > `400 validation-error` > `404 not-found` > `409` (conflictos de estado).
+    - Un método no ofrecido en una ruta existente (p. ej. `PATCH /api/matters/{matterId}`)
+      responde `405` con `code` = `method-not-allowed`, cualquiera sea el rol (la resolución del
+      método precede a la autorización).
+    - Un error inesperado responde `500` con `code` = `internal-error` y un `detail` genérico en
+      español. Ninguna respuesta incluye trazas de pila, nombres de clases, SQL ni mensajes
+      internos.
   license:
     name: Uso interno POC (datos sintéticos)
     identifier: LicenseRef-POC
@@ -29,6 +42,10 @@ tags:
     description: Autenticación y sesión del usuario.
   - name: system
     description: Información del sistema y feature flags.
+  - name: clients
+    description: Clientes de la firma (C1). Lectura para ambos roles; alta solo `PARTNER`.
+  - name: matters
+    description: Asuntos de la firma (C1). Lectura para ambos roles; alta y cierre solo `PARTNER`.
 security:
   - bearerAuth: []
 paths:
@@ -106,6 +123,245 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/clients:
+    get:
+      tags: [clients]
+      operationId: listClients
+      summary: Listar clientes
+      description: |
+        Lista paginada de clientes para cualquier usuario autenticado (`PARTNER` o `LAWYER`),
+        ordenada por `name` ascendente (y `id` para desempatar). `q` filtra por coincidencia
+        parcial sobre `name` sin distinguir mayúsculas ni minúsculas. Una página más allá de la
+        última responde `200` con `items` vacío.
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Página de clientes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientPage'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [clients]
+      operationId: createClient
+      summary: Crear cliente
+      description: |
+        Crea un cliente. Solo `PARTNER`. `name` y `taxId` se recortan (espacios al inicio y al
+        final) antes de validar y guardar; `taxId` es único (comparación exacta).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+            example:
+              name: Inversiones Andinas S.A.
+              taxId: '0000000001'
+      responses:
+        '201':
+          description: Cliente creado.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: El `taxId` ya está registrado (`code` = `client-tax-id-taken`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/client-tax-id-taken
+                title: Identificación tributaria ya registrada
+                status: 409
+                detail: Ya existe un cliente con esa identificación tributaria.
+                code: client-tax-id-taken
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/clients/{clientId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientIdPath'
+    get:
+      tags: [clients]
+      operationId: getClient
+      summary: Obtener cliente
+      description: Devuelve un cliente a cualquier usuario autenticado.
+      responses:
+        '200':
+          description: Cliente encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/matters:
+    get:
+      tags: [matters]
+      operationId: listMatters
+      summary: Listar asuntos
+      description: |
+        Lista paginada de asuntos para cualquier usuario autenticado, ordenada por `code`
+        descendente (más recientes primero). Filtros opcionales y combinables: `clientId`,
+        `status` y `q` (coincidencia parcial sin distinguir mayúsculas ni minúsculas sobre
+        `title` o `code`). Una página más allá de la última responde `200` con `items` vacío.
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - name: clientId
+          in: query
+          required: false
+          description: Filtra por cliente.
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          description: Filtra por estado (`OPEN` o `CLOSED`); otro valor responde `400`.
+          schema:
+            $ref: '#/components/schemas/MatterStatus'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Página de asuntos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatterPage'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [matters]
+      operationId: createMatter
+      summary: Crear asunto
+      description: |
+        Crea un asunto en estado `OPEN` para un cliente existente. Solo `PARTNER`. El servidor
+        genera `code` (`AS-YYYY-NNNN`, año en `America/La_Paz`); `code`, `status`, `closedAt` e
+        `id` enviados en el cuerpo se ignoran. `title` se recorta antes de validar y guardar.
+        Un `clientId` inexistente responde `404 not-found`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatterCreate'
+            example:
+              clientId: 7b0f4b8e-2c1a-4d4b-9a51-3f0f6c2d9e10
+              title: Due diligence adquisición planta
+      responses:
+        '201':
+          description: Asunto creado.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matter'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/matters/{matterId}:
+    parameters:
+      - $ref: '#/components/parameters/MatterIdPath'
+    get:
+      tags: [matters]
+      operationId: getMatter
+      summary: Obtener asunto
+      description: Devuelve un asunto a cualquier usuario autenticado.
+      responses:
+        '200':
+          description: Asunto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matter'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/matters/{matterId}/close:
+    parameters:
+      - $ref: '#/components/parameters/MatterIdPath'
+    post:
+      tags: [matters]
+      operationId: closeMatter
+      summary: Cerrar asunto
+      description: |
+        Cierra un asunto `OPEN` (irreversible): queda `CLOSED` con `closedAt` igual al instante
+        del cierre. Solo `PARTNER`. Sin cuerpo. El cierre no depende de los registros de horas
+        del asunto.
+      responses:
+        '200':
+          description: Asunto cerrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matter'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El asunto ya está cerrado (`code` = `matter-already-closed`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/matter-already-closed
+                title: El asunto ya está cerrado
+                status: 409
+                detail: El asunto ya estaba cerrado; no se modificó.
+                code: matter-already-closed
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -113,6 +369,57 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT HS256 emitido por `login` (claims `sub`, `email`, `role`; vigencia 2 h).
+  parameters:
+    Q:
+      name: q
+      in: query
+      required: false
+      description: Texto de búsqueda (coincidencia parcial, sin distinguir mayúsculas ni minúsculas).
+      schema:
+        type: string
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Página (base 0). Negativa o no numérica responde `400 validation-error`.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Tamaño de página (1 a 100). Fuera de rango o no numérico responde `400 validation-error`.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+    ClientIdPath:
+      name: clientId
+      in: path
+      required: true
+      description: Id del cliente.
+      schema:
+        type: string
+        format: uuid
+    MatterIdPath:
+      name: matterId
+      in: path
+      required: true
+      description: Id del asunto.
+      schema:
+        type: string
+        format: uuid
+  headers:
+    Location:
+      description: Ruta del recurso creado (`/api/clients/{clientId}` o `/api/matters/{matterId}`).
+      schema:
+        type: string
+        format: uri-reference
   responses:
     Unauthorized:
       description: Falta el token o no es válido (`code` = `unauthenticated`).
@@ -143,12 +450,47 @@ components:
             errors:
               - field: email
                 message: Debe ser un email válido.
-    InternalError:
-      description: Error inesperado del servidor (`code` = `internal-error`).
+    Forbidden:
+      description: El rol del usuario no permite la operación (`code` = `forbidden`).
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/forbidden
+            title: Acción no permitida para su rol
+            status: 403
+            detail: Tu rol no permite realizar esta acción.
+            code: forbidden
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+    NotFound:
+      description: El recurso no existe (`code` = `not-found`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/not-found
+            title: Recurso no encontrado
+            status: 404
+            detail: El recurso solicitado no existe.
+            code: not-found
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+    InternalError:
+      description: |
+        Error inesperado del servidor (`code` = `internal-error`). El `detail` es genérico y la
+        respuesta no incluye trazas, nombres de clases, SQL ni mensajes internos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/internal-error
+            title: Error interno
+            status: 500
+            detail: Ocurrió un error inesperado. Si persiste, informe el identificador de traza.
+            code: internal-error
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
   schemas:
     Role:
       type: string
@@ -281,3 +623,119 @@ components:
           type: integer
           format: int32
           minimum: 0
+    Client:
+      type: object
+      additionalProperties: false
+      required: [id, name, taxId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+        taxId:
+          type: [string, 'null']
+          maxLength: 50
+          description: Identificación tributaria (texto libre); `null` si no se informó.
+        createdAt:
+          type: string
+          format: date-time
+    ClientCreate:
+      type: object
+      description: |
+        Alta de cliente. `name` y `taxId` se recortan antes de validar; un valor que queda vacío
+        tras recortar responde `400 validation-error`.
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[\s\S]*\S[\s\S]*$'
+          examples: [Inversiones Andinas S.A.]
+        taxId:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: '^[\s\S]*\S[\s\S]*$'
+          description: Opcional. Único entre clientes (comparación exacta).
+          examples: ['0000000001']
+    MatterStatus:
+      type: string
+      description: Estado del asunto. `OPEN` = Abierto, `CLOSED` = Cerrado.
+      enum: [OPEN, CLOSED]
+    Matter:
+      type: object
+      additionalProperties: false
+      required: [id, code, clientId, clientName, title, description, status, createdAt, closedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Código generado por el servidor (`AS-YYYY-NNNN`).
+          pattern: '^AS-\d{4}-\d{4}$'
+          examples: [AS-2026-0012]
+        clientId:
+          type: string
+          format: uuid
+        clientName:
+          type: string
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+        status:
+          $ref: '#/components/schemas/MatterStatus'
+        createdAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: [string, 'null']
+          format: date-time
+          description: Instante del cierre; `null` mientras el asunto está `OPEN`.
+    MatterCreate:
+      type: object
+      description: |
+        Alta de asunto. `title` se recorta antes de validar. Los campos de solo lectura
+        (`id`, `code`, `status`, `closedAt`) no forman parte del esquema y se ignoran si se envían.
+      required: [clientId, title]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[\s\S]*\S[\s\S]*$'
+          examples: [Due diligence adquisición planta]
+        description:
+          type: string
+          maxLength: 2000
+    ClientPage:
+      description: Página de clientes.
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Client'
+    MatterPage:
+      description: Página de asuntos.
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Matter'

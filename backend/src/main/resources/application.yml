@@ -23,8 +23,11 @@ server:
   port: 8081
   shutdown: graceful
   error:
+    # Errores sin detalles internos (add-clients-matters D7): ni mensaje, ni traza, ni clase.
     include-message: never
     include-stacktrace: never
+    include-exception: false
+    include-binding-errors: never
 
 management:
   endpoints:

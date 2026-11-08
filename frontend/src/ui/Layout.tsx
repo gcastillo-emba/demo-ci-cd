@@ -24,6 +24,12 @@ export function Layout({ children }: { children: ReactNode }) {
                       Inicio
                     </NavLink>
                   </li>
+                  <li>
+                    <NavLink to="/clientes">Clientes</NavLink>
+                  </li>
+                  <li>
+                    <NavLink to="/asuntos">Asuntos</NavLink>
+                  </li>
                 </ul>
               </nav>
               <div className="app-header__user">

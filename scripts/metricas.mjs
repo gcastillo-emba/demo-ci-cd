@@ -189,11 +189,11 @@ export function categoriaBitacora(f) {
     )
   )
     return 'gate de juicio';
-  if (/CodeQL/.test(t)) return 'CodeQL';
+  if (/CodeQL/.test(f.que) && !/\b403\b/.test(f.que)) return 'CodeQL';
   if (/semantic-title/.test(t)) return 'semantic-title';
   if (/compose|worktree/i.test(t) && /paralelo|colisi|comparten|mismo proyecto/i.test(t))
     return 'concurrencia entre worktrees';
-  if (/clasificador|subagent|heredoc|sandbox|reemplazarse|force push/i.test(t))
+  if (/clasificador|subagent|heredoc|sandbox|reemplaza(rse|ron)|force push|push --force/i.test(t))
     return 'herramienta / Claude Code';
   if (/spec|design|tarea|orquestador|escenario|supuesto/i.test(f.que)) return 'spec o instrucción';
   if (/gate\.mjs|en rojo|falló|falla/i.test(f.que)) return 'gate mecánico local';

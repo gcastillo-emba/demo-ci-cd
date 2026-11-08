@@ -9,27 +9,27 @@ node scripts/metricas.mjs --salida docs/metricas-demo.md --mada "<checkout princ
 ```
 
 - Fuentes: `gh pr list`, `gh run list` y `gh run view` (jobs fallidos), comentarios `VEREDICTO:` y `## Revisión de seguridad` de los PRs, el artefacto `jacoco-report` del último CI verde de `main`, `docs/bitacora-fallas.md`, `.mada/fases.jsonl`, `.mada/f0-start` y `.gate/last-run.json`.
-- `.mada/` y `.gate/` están en `.gitignore`: viven en el checkout donde se trabajó. Por eso se pasan con `--mada` y `--gate` (este último se puede repetir, uno por worktree).
+- `.mada/` y `.gate/` están en `.gitignore`: viven en el checkout donde se trabajó. Por eso se pasan con `--mada` y `--gate` (este último se puede repetir, uno por worktree). **Al limpiar un worktree se pierde su `.gate/last-run.json`**: copiarlo antes si se quiere conservar la medición (pasó con los de C3 y C4).
 - El script solo reemplaza el bloque entre los marcadores `metricas:inicio` y `metricas:fin`. Sin `--salida`, imprime el bloque por la salida estándar.
 
 ## Resumen
 
-| Métrica                                        | Valor                                                                                                                                                                                                            | Fuente                                                       |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Duración total (F0 → último merge previo a F6) | ≈ 9 h 32 min de reloj (2026-11-08 01:41 → 11:13 UTC, merge del PR #23), con fases solapadas por trabajo en paralelo; C4 se fusionó a las 10:45                                                                   | `.mada/f0-start`, `.mada/fases.jsonl`, PRs                   |
-| PRs del agente fusionados                      | 16 en `main` antes de F6: 5 `feat` (skeleton y C1–C4), 2 `fix`, 2 `docs`, 6 `chore` (encuadre, skills y 4 de dependencias) y 1 `ci` (CodeQL v4)                                                                  | tabla "Pull requests"                                        |
-| PRs reemplazados                               | 2 (#11 → #13 y #12 → #14), por rebase sin `push --force`                                                                                                                                                         | bitácora, fila 48                                            |
-| PRs de Dependabot                              | 10: 9 cerrados (los obsoletos los cerró Dependabot; el triage reemplazó #6, #7, #8 y #18 por PRs propios #22–#25) y 1 abierto al cierre (#28)                                                                    | tabla "Pull requests", nota de triage                        |
-| Jobs de CI fallidos en ramas del agente        | 0 de CI mecánico (24 en ramas de Dependabot), 3 de `semantic-title` y 3 corridas de CodeQL caídas por infraestructura (504: una en #19, dos en #20; la tabla generada solo ve el último intento de cada corrida) | tabla "Fallas de gates mecánicos en CI"                      |
-| Alertas de CodeQL que bloquearon un PR         | 3 (PR #1 falso positivo, PR #5 CSRF acotado, PR #13 archivo temporal inseguro, este último real)                                                                                                                 | bitácora, filas 11, 19 y 47                                  |
-| Gates de juicio con CAMBIOS SOLICITADOS        | 5 veredictos en 4 PRs (#1 dos veces, #2, #13, #20)                                                                                                                                                               | tabla "Gates de juicio"                                      |
-| Etiquetas `seguridad:ok` retenidas             | 2 (PRs #19 y #20, por SAST no ejecutado tras un 504)                                                                                                                                                             | tabla "Gates de juicio"                                      |
-| Filas en la bitácora                           | 53 al cierre de F6                                                                                                                                                                                               | [bitácora](bitacora-fallas.md)                               |
-| Cobertura JaCoCo `domain` + `application`      | 100 % de líneas, 99,8 % de instrucciones y 98,2 % de ramas con C4 incluido (umbral del gate: 80 %)                                                                                                               | artefacto `jacoco-report` del último CI verde de `main`      |
-| Evals del asistente (C4, adaptador `fake`)     | 10/10 casos en verde                                                                                                                                                                                             | job `evals` del PR #20, `evals/description-assistant/cases/` |
-| Gate local completo con E2E                    | 235–255 s (C3 y C4); el paso más lento es `backend` (≈ 110 s)                                                                                                                                                    | `.gate/last-run.json` de cada worktree                       |
-| Arranque de la demo en frío (`demo:check`)     | **87,5 s** (≈ 88 s) desde imágenes de GHCR sin caché hasta `healthy`; 46,6 s con imágenes descargadas. Meta del plan: < 5 min                                                                                    | [runbook](runbook.md), README                                |
-| Intervenciones humanas                         | 6 decisiones tomadas y 1 pendiente (tag `v0.1.0`)                                                                                                                                                                | sección "Intervenciones humanas"                             |
+| Métrica                                        | Valor                                                                                                                                                                                                                                                                                                                                      | Fuente                                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Duración total (F0 → último merge previo a F6) | ≈ 9 h 32 min de reloj (2026-11-08 01:41 → 11:13 UTC, merge del PR #23), con fases solapadas por trabajo en paralelo; C4 se fusionó a las 10:45                                                                                                                                                                                             | `.mada/f0-start`, `.mada/fases.jsonl`, PRs                   |
+| PRs del agente fusionados                      | 16 en `main` antes de F6: 5 `feat` (skeleton y C1–C4), 2 `fix`, 2 `docs`, 6 `chore` (encuadre, skills y 4 de dependencias) y 1 `ci` (CodeQL v4)                                                                                                                                                                                            | tabla "Pull requests"                                        |
+| PRs reemplazados                               | 2 (#11 → #13 y #12 → #14), por rebase sin `push --force`                                                                                                                                                                                                                                                                                   | bitácora, fila 48                                            |
+| PRs de Dependabot                              | 10: 9 cerrados (los obsoletos los cerró Dependabot; el triage reemplazó #6, #7, #8 y #18 por PRs propios #22–#25) y 1 abierto al cierre (#28)                                                                                                                                                                                              | tabla "Pull requests", nota de triage                        |
+| Jobs de CI fallidos en ramas del agente        | 0 de CI mecánico (24 en ramas de Dependabot), 3 de `semantic-title` y 3 corridas de CodeQL caídas por infraestructura (504: una en #19, dos en #20; la tabla generada solo ve el último intento de cada corrida)                                                                                                                           | tabla "Fallas de gates mecánicos en CI"                      |
+| Alertas de CodeQL que bloquearon un PR         | 3 (PR #1 falso positivo, PR #5 CSRF acotado, PR #13 archivo temporal inseguro, este último real)                                                                                                                                                                                                                                           | bitácora, filas 11, 19 y 47                                  |
+| Gates de juicio con CAMBIOS SOLICITADOS        | 5 veredictos en 4 PRs (#1 dos veces, #2, #13, #20)                                                                                                                                                                                                                                                                                         | tabla "Gates de juicio"                                      |
+| Etiquetas `seguridad:ok` retenidas             | 2 (PRs #19 y #20, por SAST no ejecutado tras un 504)                                                                                                                                                                                                                                                                                       | tabla "Gates de juicio"                                      |
+| Filas en la bitácora                           | 54 al cierre de F6                                                                                                                                                                                                                                                                                                                         | [bitácora](bitacora-fallas.md)                               |
+| Cobertura JaCoCo `domain` + `application`      | 100 % de líneas, 99,8 % de instrucciones y 98,2 % de ramas con C4 incluido (umbral del gate: 80 %)                                                                                                                                                                                                                                         | artefacto `jacoco-report` del último CI verde de `main`      |
+| Evals del asistente (C4, adaptador `fake`)     | 10/10 casos en verde                                                                                                                                                                                                                                                                                                                       | job `evals` del PR #20, `evals/description-assistant/cases/` |
+| Gate local                                     | Completo con E2E: **208,5 s** (paso más lento `backend`, 98,0 s), único `last-run.json --e2e` que se conserva (checkout principal, F3). Rápido: ver la tabla generada. Las corridas `--e2e` de C3 y C4 dieron 235,2 s y 254,8 s según los `last-run.json` de sus worktrees, leídos el 2026-11-08 antes de limpiarlos: **no reproducibles** | tabla "Gate local"                                           |
+| Arranque de la demo en frío (`demo:check`)     | **87,5 s** (≈ 88 s) desde imágenes de GHCR sin caché hasta `healthy`; 46,6 s con imágenes descargadas. Meta del plan: < 5 min                                                                                                                                                                                                              | [runbook](runbook.md), README                                |
+| Intervenciones humanas                         | 6 decisiones tomadas y 1 pendiente (tag `v0.1.0`)                                                                                                                                                                                                                                                                                          | sección "Intervenciones humanas"                             |
 
 ## Intervenciones humanas
 
@@ -47,7 +47,7 @@ Las cuenta el orquestador: no se pueden derivar de `gh`. Solo se incluyen las de
 
 ## Lectura de los números
 
-- **El gate local funciona como filtro.** Ningún PR del agente falló un job de CI mecánico (backend, frontend, contrato, E2E). Todas las fallas de ese tipo están en ramas de Dependabot, que no pasan por el gate local. El costo se paga antes: 13 filas de la bitácora son fallas del gate local que nunca llegaron a CI.
+- **El gate local funciona como filtro.** Ningún PR del agente falló un job de CI mecánico (backend, frontend, contrato, E2E). Todas las fallas de ese tipo están en ramas de Dependabot, que no pasan por el gate local. El costo se paga antes: la categoría "gate mecánico local" de la tabla de la bitácora (clasificación heurística) reúne las fallas que el gate local atrapó antes de CI.
 - **Los checks rojos de CI en ramas del agente** son de dos tipos: títulos de PR con scopes no permitidos (barato de corregir) y CodeQL, con alertas o con una falla de infraestructura.
 - **C2 (PR #16) tardó 3 h 57 min entre abierto y fusionado**, contra 7–32 min de los demás. El código estaba listo a las 05:43 (`fin` en `fases.jsonl`). La espera se debió al bloqueo del clasificador sobre el veredicto del revisor (intervenciones 4 y 5), no a trabajo técnico.
 - **C3 aparece con 4 h 32 min** porque `fases.jsonl` no registró su `fin` y el script toma el merge del PR #19. Ese intervalo incluye la misma espera de C2, ya que C3 se construyó en paralelo.
@@ -57,7 +57,7 @@ Las cuenta el orquestador: no se pueden derivar de `gh`. Solo se incluyen las de
 
 <!-- metricas:inicio -->
 
-> Generado con `node scripts/metricas.mjs` el 2026-11-08 11:17 UTC sobre `gcastillo-emba/demo-ci-cd`. No editar a mano entre los marcadores.
+> Generado con `node scripts/metricas.mjs` el 2026-11-08 11:31 UTC sobre `gcastillo-emba/demo-ci-cd`. No editar a mano entre los marcadores.
 
 ### Tiempo por fase
 
@@ -79,12 +79,12 @@ Las cuenta el orquestador: no se pueden derivar de `gh`. Solo se incluyen las de
 | ci                  | 1        |
 | dependabot (closed) | 9        |
 | dependabot (open)   | 1        |
-| docs                | 2        |
+| docs                | 3        |
 | feat                | 5        |
 | fix                 | 2        |
 | reemplazado         | 2        |
 
-Total: 28 PRs.
+Total: 29 PRs.
 
 | PR  | Título                                                                                                                                   | Tipo        | Estado | Abierto (UTC)    | Abierto → merge |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------ | ---------------- | --------------- |
@@ -116,18 +116,19 @@ Total: 28 PRs.
 | #26 | chore(deps): Bump the backend group in /backend with 4 updates                                                                           | dependabot  | closed | 2026-11-08 11:03 | —               |
 | #27 | chore(deps): Bump the actions group with 5 updates                                                                                       | dependabot  | closed | 2026-11-08 11:04 | —               |
 | #28 | chore(deps): Bump the dev-tooling group across 1 directory with 9 updates                                                                | dependabot  | open   | 2026-11-08 11:14 | —               |
+| #29 | docs: retro y evidencia (F6)                                                                                                             | docs        | open   | 2026-11-08 11:20 | —               |
 
 ### Corridas de GitHub Actions
 
 | Workflow           | Corridas | success | failure | cancelled | skipped |
 | ------------------ | -------- | ------- | ------- | --------- | ------- |
-| CD                 | 13       | 13      | 0       | 0         | 0       |
-| CI                 | 67       | 50      | 9       | 6         | 0       |
-| Claude review      | 44       | 0       | 0       | 0         | 44      |
+| CD                 | 14       | 14      | 0       | 0         | 0       |
+| CI                 | 68       | 53      | 9       | 6         | 0       |
+| Claude review      | 45       | 0       | 0       | 0         | 45      |
 | Dependabot Updates | 39       | 36      | 3       | 0         | 0       |
 | Labels reset       | 22       | 22      | 0       | 0         | 0       |
-| PR title           | 90       | 87      | 3       | 0         | 0       |
-| Security           | 67       | 65      | 2       | 0         | 0       |
+| PR title           | 91       | 88      | 3       | 0         | 0       |
+| Security           | 68       | 66      | 2       | 0         | 0       |
 
 Reintentos (corridas con `attempt` > 1, p. ej. `gh run rerun --failed`): **2**.
 
@@ -182,8 +183,9 @@ Las fallas de CodeQL por **alertas** (no por jobs caídos) se publican como el c
 | #23 | 0                            | 1                 | 1                 | 0                            |
 | #24 | 0                            | 1                 | 1                 | 0                            |
 | #25 | 0                            | 1                 | 1                 | 0                            |
+| #29 | 1                            | 0                 | 1                 | 0                            |
 
-Totales: 5 CAMBIOS SOLICITADOS, 17 APROBADO, 2 etiquetas `seguridad:ok` retenidas por SAST incompleto.
+Totales: 6 CAMBIOS SOLICITADOS, 17 APROBADO, 2 etiquetas `seguridad:ok` retenidas por SAST incompleto.
 
 ### Bitácora de fallas
 
@@ -198,19 +200,20 @@ Totales: 5 CAMBIOS SOLICITADOS, 17 APROBADO, 2 etiquetas `seguridad:ok` retenida
 | C4   | 8     |
 | Deps | 4     |
 | F4   | 7     |
+| F6   | 1     |
 
 | Categoría (heurística por palabras clave) | Filas |
 | ----------------------------------------- | ----- |
 | gate mecánico local                       | 17    |
 | entorno / dependencias                    | 10    |
 | spec o instrucción                        | 9     |
-| CodeQL                                    | 5     |
-| herramienta / Claude Code                 | 4     |
-| gate de juicio                            | 4     |
+| herramienta / Claude Code                 | 5     |
+| gate de juicio                            | 5     |
+| CodeQL                                    | 4     |
 | concurrencia entre worktrees              | 3     |
 | semantic-title                            | 1     |
 
-Total: 53 filas.
+Total: 54 filas.
 
 ### Cobertura JaCoCo (`domain` + `application`)
 
@@ -222,6 +225,7 @@ Total: 53 filas.
 
 | Archivo             | Fecha (UTC)      | Modo     | Total   | Paso más lento   | Resultado |
 | ------------------- | ---------------- | -------- | ------- | ---------------- | --------- |
-| cranky-tharp-c82b0b | 2026-11-08 10:43 | --rapido | 124.8 s | backend (50.7 s) | todo PASS |
+| demo-ci-cd          | 2026-11-08 04:43 | --e2e    | 208.5 s | backend (98.0 s) | todo PASS |
+| cranky-tharp-c82b0b | 2026-11-08 11:20 | --rapido | 132.2 s | backend (54.3 s) | todo PASS |
 
 <!-- metricas:fin -->

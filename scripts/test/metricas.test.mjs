@@ -15,9 +15,88 @@ import {
   jacocoCapas,
   filaGate,
   reemplazarBloque,
+  resumenCorridas,
+  bloque,
   INICIO,
   FIN,
 } from '../metricas.mjs';
+
+test('resumenCorridas cuenta por workflow y conclusión', () => {
+  const r = resumenCorridas([
+    { workflowName: 'CI', conclusion: 'success' },
+    { workflowName: 'CI', conclusion: 'failure' },
+    { workflowName: 'CI', conclusion: '', status: 'in_progress' },
+    { workflowName: 'Claude review', conclusion: 'skipped' },
+  ]);
+  assert.deepEqual(r, {
+    CI: { total: 3, success: 1, failure: 1, in_progress: 1 },
+    'Claude review': { total: 1, skipped: 1 },
+  });
+});
+
+test('categoriaBitacora: el 403 de F0 no es CodeQL y push --force es herramienta', () => {
+  const f403 = {
+    que: 'Branch protection, CodeQL, dependency-review y secret scanning devuelven 403 en el repo.',
+    causa: 'Repo privado en plan GitHub Free.',
+  };
+  assert.equal(categoriaBitacora(f403), 'entorno / dependencias');
+  const fForce = {
+    que: 'Los PRs #11 y #12 se cerraron y se reemplazaron por ramas `-v2`.',
+    causa: 'El hook bloquea `push --force`.',
+  };
+  assert.equal(categoriaBitacora(fForce), 'herramienta / Claude Code');
+});
+
+test('bloque arma todas las secciones con datos mínimos', () => {
+  const md = bloque({
+    generado: '2026-11-08T12:00:00.000Z',
+    repo: 'o/r',
+    fases: [],
+    prs: [
+      {
+        number: 1,
+        title: 'feat(c1): a|b',
+        state: 'MERGED',
+        createdAt: '2026-11-08T01:00:00Z',
+        mergedAt: '2026-11-08T01:10:00Z',
+        author: { login: 'x' },
+      },
+    ],
+    resumenPrs: { feat: 1 },
+    corridas: { CI: { total: 2, success: 1, failure: 1 } },
+    reintentos: 1,
+    fallas: [
+      {
+        createdAt: '2026-11-08T02:00:00Z',
+        workflowName: 'CI',
+        headBranch: 'dependabot/npm/x',
+        attempt: 1,
+        jobs: ['backend'],
+        tipos: ['CI mecánico'],
+      },
+    ],
+    veredictos: { 1: { aprobado: 1, cambios: 1, seguridad: 1, retenida: 0 } },
+    bitacora: [{ n: 1, fase: 'F0', que: 'x', causa: 'y' }],
+    jacoco: null,
+    gates: [],
+  });
+  for (const s of [
+    '### Tiempo por fase',
+    '### Pull requests',
+    '### Corridas de GitHub Actions',
+    '### Fallas de gates mecánicos en CI',
+    '### Gates de juicio',
+    '### Bitácora de fallas',
+    '### Cobertura JaCoCo',
+    '### Gate local',
+  ]) {
+    assert.ok(md.includes(s), s);
+  }
+  assert.match(md, /feat\(c1\): a\\\|b/);
+  assert.match(md, /\| CI mecánico \| 0 \| 1 \|/);
+  assert.match(md, /\*\*1\*\*/);
+  assert.match(md, /Totales: 1 CAMBIOS SOLICITADOS, 1 APROBADO/);
+});
 
 const pr = (number, title, extra = {}) => ({
   number,

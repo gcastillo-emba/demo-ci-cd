@@ -65,8 +65,8 @@ El merge solo ocurre con `scripts/merge-si-verde.mjs` (`/merge-si-verde <pr>`), 
 
 ### Skills
 
-- `nueva-capacidad` (**se crea al cerrar C1**; aún no existe): procedimiento MADA completo para una capacidad (C1–C4) con los comandos OpenSpec verificados.
-- `adr` (**se crea al cerrar C1**; aún no existe): plantilla y numeración automática de ADRs.
+- `nueva-capacidad` (`.claude/skills/nueva-capacidad/SKILL.md`): procedimiento MADA completo de una capacidad (contrato → backend ∥ frontend en worktrees → integración → archivo → PR → merge), destilado de C1.
+- `adr` (`.claude/skills/adr/SKILL.md`): plantilla y numeración automática de ADRs.
 - `openspec-*` y `/opsx:*`: generados por OpenSpec, no se editan.
 
 ### Comandos (`.claude/commands/`)

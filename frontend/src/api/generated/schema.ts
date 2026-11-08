@@ -346,6 +346,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/description-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sugerir descripción de un registro de horas
+         * @description Devuelve una descripción profesional en español (como máximo 300 caracteres, sin saltos
+         *     de línea, correos ni teléfonos) sugerida a partir de una nota libre del abogado. No crea
+         *     ni modifica registros: la sugerencia no se persiste. `provider` identifica al adaptador
+         *     que la generó (`fake` por defecto, determinista; `anthropic` opcional).
+         *
+         *     Precedencia de verificaciones (sin invocar al proveedor salvo en el último paso):
+         *
+         *     1. Sin token o token inválido → `401 unauthenticated`.
+         *     2. Indicador `descriptionAssistant` apagado → `404 feature-disabled` para cualquier rol
+         *        (incluido `PARTNER`): el endpoint es indistinguible de uno inexistente.
+         *     3. Rol distinto de `LAWYER` → `403 forbidden` (aunque el cuerpo sea inválido).
+         *     4. Validación → `400 validation-error`: `note` se recorta antes de validar; ausente, vacía
+         *        o solo con espacios agrega `errors[]` con `field: note` y `code: assistant-note-empty`;
+         *        más de 500 caracteres (code points, tras el recorte) agrega `field: note` y
+         *        `code: assistant-note-too-long`; `matterId` que no es UUID agrega `field: matterId`.
+         *     5. `matterId` de un asunto inexistente → `404 not-found` (cualquier estado del asunto es
+         *        válido; solo se usa su código como contexto, nunca datos del cliente).
+         *     6. Proveedor que no responde en el tiempo límite (8 s por defecto), falla o devuelve un
+         *        texto vacío → `503 assistant-unavailable`.
+         */
+        post: operations["suggestDescription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -383,7 +421,10 @@ export interface components {
             user: components["schemas"]["User"];
         };
         Features: {
-            /** @description Asistente de descripción (C4) habilitado. */
+            /**
+             * @description Asistente de descripción (C4) habilitado (`app.features.description-assistant`):
+             *     `false` por defecto en producción y `true` en el perfil `demo`.
+             */
             descriptionAssistant: boolean;
         };
         /** @description Detalle de error RFC 9457. */
@@ -409,6 +450,12 @@ export interface components {
         };
         FieldError: {
             field: string;
+            /**
+             * @description Opcional. Código estable en inglés (kebab-case) del error de este campo, cuando la
+             *     operación lo define (p. ej. `assistant-note-empty`, `assistant-note-too-long` en
+             *     `suggestDescription`). Su ausencia no cambia el significado de `field` y `message`.
+             */
+            code?: string;
             /** @description Mensaje en español. */
             message: string;
         };
@@ -733,6 +780,43 @@ export interface components {
              */
             byLawyer: components["schemas"]["LawyerHoursRow"][];
         };
+        /**
+         * @description Nota libre del abogado para sugerir una descripción. `note` es obligatoria en la práctica,
+         *     pero el esquema no la marca como requerida ni fija `minLength`/`maxLength`: la ausencia,
+         *     el vacío (tras recortar) y el exceso de 500 caracteres los resuelve el guardrail del
+         *     servidor con `400 validation-error` y `errors[].code` propio (`assistant-note-empty`,
+         *     `assistant-note-too-long`). Las propiedades desconocidas se ignoran.
+         */
+        DescriptionSuggestionRequest: {
+            /**
+             * @description Nota libre (se recorta antes de validar; de 1 a 500 caracteres Unicode tras el
+             *     recorte). Se trata solo como datos, nunca como instrucciones; los correos y teléfonos
+             *     se redactan antes de llegar al proveedor.
+             * @example reunion cliente revisar contrato arrendamiento
+             */
+            note?: string;
+            /**
+             * Format: uuid
+             * @description Opcional. Asunto existente (cualquier estado) usado solo como contexto (su código).
+             *     Formato inválido responde `400 validation-error`; inexistente, `404 not-found`.
+             */
+            matterId?: string;
+        };
+        DescriptionSuggestionResponse: {
+            /**
+             * @description Descripción sugerida en español: no vacía, como máximo 300 caracteres Unicode, sin
+             *     saltos de línea y sin correos ni teléfonos (reemplazados por `[correo]` /
+             *     `[teléfono]`). Texto plano: la interfaz no debe interpretarlo como HTML ni Markdown.
+             * @example Reunión con el cliente para revisar el contrato de arrendamiento.
+             */
+            suggestion: string;
+            provider: components["schemas"]["AssistantProvider"];
+        };
+        /**
+         * @description Adaptador que generó la sugerencia (`fake` determinista por defecto).
+         * @enum {string}
+         */
+        AssistantProvider: "fake" | "anthropic";
     };
     responses: {
         /** @description Falta el token o no es válido (`code` = `unauthenticated`). */
@@ -1619,6 +1703,94 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    suggestDescription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "note": "reunion cliente revisar contrato arrendamiento",
+                 *       "matterId": "3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718"
+                 *     }
+                 */
+                "application/json": components["schemas"]["DescriptionSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Sugerencia generada (no persistida). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "suggestion": "Reunión con el cliente para revisar el contrato de arrendamiento.",
+                     *       "provider": "fake"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DescriptionSuggestionResponse"];
+                };
+            };
+            /**
+             * @description La solicitud no cumple las validaciones (`code` = `validation-error`). Para `note`,
+             *     `errors[].code` es `assistant-note-empty` (ausente, vacía o solo espacios) o
+             *     `assistant-note-too-long` (más de 500 caracteres tras el recorte). Un `matterId` que
+             *     no es UUID agrega un elemento con `field: matterId`. No se invoca al proveedor.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description `code` = `feature-disabled` si el indicador `descriptionAssistant` está apagado
+             *     (cualquier rol, se evalúa antes del rol), o `code` = `not-found` si `matterId` no
+             *     corresponde a un asunto existente.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+            /**
+             * @description El proveedor no respondió en el tiempo límite, falló o devolvió un texto vacío
+             *     (`code` = `assistant-unavailable`). La descripción puede escribirse manualmente.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "https://asuntos-horas.example/problems/assistant-unavailable",
+                     *       "title": "Asistente no disponible",
+                     *       "status": 503,
+                     *       "detail": "El asistente no está disponible en este momento; puedes escribir la descripción manualmente.",
+                     *       "code": "assistant-unavailable",
+                     *       "traceId": "4bf92f3577b34da6a3ce929d0e0e4736"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
 }

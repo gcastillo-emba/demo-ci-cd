@@ -53,17 +53,18 @@ Lenguaje ubicuo del POC. Regla: **documentación y UI en español; código, iden
 
 ## Asistente de descripción (C4)
 
-| Español                    | Identificador                                       | Definición                                                                                         |
-| -------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Asistente de descripción   | `DescriptionAssistant`                              | Puerto que propone una descripción mejorada a partir del borrador.                                 |
-| Sugerencia                 | `suggestion`                                        | Texto propuesto (máx. 300 caracteres, nunca vacío); el usuario la acepta, edita o descarta.        |
-| Nota (borrador)            | `note`                                              | Texto de entrada del usuario (1–500 caracteres tras recortar).                                     |
-| Adaptador simulado         | `fake`                                              | Implementación determinista por defecto, usada en tests y evals.                                   |
-| Adaptador Anthropic        | `anthropic`                                         | Implementación real vía HTTP; inactiva sin `ANTHROPIC_API_KEY`.                                    |
-| Proveedor                  | `provider`                                          | Adaptador que generó la sugerencia (`fake` o `anthropic`), devuelto en la respuesta.               |
-| Indicador de funcionalidad | feature flag (`app.features.description-assistant`) | Interruptor de configuración expuesto en `GET /api/features` con la clave `description-assistant`. |
-| Guardrail                  | `guardrail`                                         | Límite verificable sobre entrada/salida del asistente.                                             |
-| Eval                       | `eval case`                                         | Caso YAML en `evals/description-assistant/cases/` que verifica comportamiento.                     |
+| Español                      | Identificador                                       | Definición                                                                                         |
+| ---------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Asistente de descripción     | `DescriptionAssistant`                              | Puerto que propone una descripción mejorada a partir del borrador.                                 |
+| Sugerencia                   | `suggestion`                                        | Texto propuesto (máx. 300 caracteres, nunca vacío); el usuario la acepta, edita o descarta.        |
+| Nota (borrador)              | `note`                                              | Texto de entrada del usuario (1–500 caracteres tras recortar).                                     |
+| Adaptador simulado           | `fake`                                              | Implementación determinista por defecto, usada en tests y evals.                                   |
+| Adaptador Anthropic          | `anthropic`                                         | Implementación real vía HTTP; inactiva sin `ANTHROPIC_API_KEY`.                                    |
+| Proveedor                    | `provider`                                          | Adaptador que generó la sugerencia (`fake` o `anthropic`), devuelto en la respuesta.               |
+| Indicador de funcionalidad   | feature flag (`app.features.description-assistant`) | Interruptor de configuración expuesto en `GET /api/features` con la clave `descriptionAssistant`.  |
+| Datos de contacto redactados | `PiiRedactor` (`[correo]`, `[teléfono]`)            | Correos y teléfonos reemplazados por marcadores en la nota que va al proveedor y en la sugerencia. |
+| Guardrail                    | `guardrail`                                         | Límite verificable sobre entrada/salida del asistente.                                             |
+| Eval                         | `eval case`                                         | Caso YAML en `evals/description-assistant/cases/` que verifica comportamiento.                     |
 
 ## API y errores
 

@@ -54,8 +54,8 @@ npm run dev     # PostgreSQL en Docker, backend en :8081 (perfil demo) y fronten
 | Walking skeleton (login, JWT)   | — (F3)                      | Fusionado ([#5](https://github.com/gcastillo-emba/demo-ci-cd/pull/5))   |
 | C1 — Clientes y asuntos         | `add-clients-matters`       | Fusionado ([#10](https://github.com/gcastillo-emba/demo-ci-cd/pull/10)) |
 | C2 — Registro de horas          | `add-time-entries`          | Fusionado ([#16](https://github.com/gcastillo-emba/demo-ci-cd/pull/16)) |
-| C3 — Tablero de horas           | `add-hours-dashboard`       | En revisión (PR `feat(c3)`)                                             |
-| C4 — Asistente de descripciones | `add-description-assistant` | Propuesta aprobada (F2), pendiente de implementar                       |
+| C3 — Tablero de horas           | `add-hours-dashboard`       | Fusionado ([#19](https://github.com/gcastillo-emba/demo-ci-cd/pull/19)) |
+| C4 — Asistente de descripciones | `add-description-assistant` | En revisión (PR `feat(c4)`)                                             |
 
 ## Estructura del repositorio
 

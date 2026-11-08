@@ -174,3 +174,13 @@ test('un CAMBIOS SOLICITADOS posterior invalida el APROBADO anterior', () => {
   ];
   assert.equal(evaluarVeredicto(cs, SHA).length, 1);
 });
+
+test('el veredicto aprobado debe estar en la primera línea', () => {
+  const c = [
+    {
+      authorAssociation: 'OWNER',
+      body: `VEREDICTO: CAMBIOS SOLICITADOS\nNo es VEREDICTO: APROBADO todavía ${SHA}`,
+    },
+  ];
+  assert.equal(evaluarVeredicto(c, SHA).length, 1);
+});

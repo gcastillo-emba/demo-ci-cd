@@ -38,7 +38,7 @@ El sistema SHALL (DEBE) responder todo error de esta capacidad con `Content-Type
 
 ### Requirement: Errores sin detalles internos
 
-Las respuestas Problem Details de toda la API `/api` SHALL NOT (NO DEBEN) incluir trazas de pila (_stack traces_), nombres de clases de excepción, sentencias SQL ni mensajes internos de librerías o de la base de datos. Un error inesperado (sin entrada en `ProblemCatalog`) SHALL (DEBE) responder `500` con `code` = `internal-error`, un `detail` genérico en español que no revele la causa y el `traceId` para correlacionarlo con los logs. Este comportamiento es compartido: C2–C4 lo heredan sin redeclararlo.
+Las respuestas Problem Details de toda la API `/api` SHALL NOT (NO DEBEN) incluir trazas de pila, nombres de clases de excepción, sentencias SQL ni mensajes internos de librerías o de la base de datos. Un error inesperado (sin entrada en `ProblemCatalog`) SHALL (DEBE) responder `500` con `code` = `internal-error`, un `detail` genérico en español que no revele la causa y el `traceId` para correlacionarlo con los logs. Este comportamiento es compartido: C2–C4 lo heredan sin redeclararlo.
 
 #### Scenario: Error inesperado de persistencia
 
@@ -190,7 +190,7 @@ El sistema SHALL (DEBE) devolver un cliente con `GET /api/clients/{clientId}` a 
 
 ### Requirement: El Socio crea asuntos
 
-El sistema SHALL (DEBE) permitir a un usuario con rol `PARTNER` crear un asunto mediante `POST /api/matters` con `clientId` de un cliente existente, `title` obligatorio (1 a 200 caracteres tras recortar espacios) y `description` opcional (hasta 2000 caracteres). La respuesta SHALL (DEBE) ser `201` con el asunto (`id`, `code`, `clientId`, `clientName`, `title`, `description`, `status` = `OPEN`, `createdAt`, `closedAt` nulo) y la cabecera `Location` apuntando a `/api/matters/{matterId}`. El cliente SHALL NOT (NO DEBE) poder fijar `code`, `status` ni `closedAt`.
+El sistema SHALL (DEBE) permitir a un usuario con rol `PARTNER` crear un asunto mediante `POST /api/matters` con `clientId` de un cliente existente, `title` obligatorio y `description` opcional. La respuesta SHALL (DEBE) ser `201` con el asunto (`id`, `code`, `clientId`, `clientName`, `title`, `description`, `status` = `OPEN`, `createdAt`, `closedAt` nulo) y la cabecera `Location` apuntando a `/api/matters/{matterId}`. El cliente SHALL NOT (NO DEBE) poder fijar `code`, `status` ni `closedAt`.
 
 #### Scenario: Alta de asunto
 
@@ -309,7 +309,7 @@ El sistema SHALL (DEBE) devolver un asunto con `GET /api/matters/{matterId}` a c
 
 ### Requirement: El Socio cierra asuntos
 
-El sistema SHALL (DEBE) permitir a un usuario `PARTNER` cerrar un asunto `OPEN` mediante `POST /api/matters/{matterId}/close`, respondiendo `200` con el asunto en `status` = `CLOSED` y `closedAt` igual al instante del cierre. El cierre SHALL NOT (NO DEBE) depender de la existencia ni del estado de registros de horas del asunto; en particular, SHALL (DEBE) permitirse aunque el asunto tenga registros de horas pendientes. Si el asunto no existe, SHALL (DEBE) responder `404` con `code` = `not-found`.
+El sistema SHALL (DEBE) permitir a un usuario `PARTNER` cerrar un asunto `OPEN` mediante `POST /api/matters/{matterId}/close`, respondiendo `200` con el asunto en `status` = `CLOSED` y `closedAt` igual al instante del cierre. El cierre SHALL NOT (NO DEBE) depender de la existencia ni del estado de registros de horas del asunto; en particular, SHALL (DEBE) permitirse aunque tenga registros de horas pendientes. Si el asunto no existe, SHALL (DEBE) responder `404` con `code` = `not-found`.
 
 #### Scenario: Cierre exitoso
 
@@ -344,7 +344,7 @@ El sistema SHALL (DEBE) responder `409` con `code` = `matter-already-closed` al 
 
 ### Requirement: Un asunto cerrado no se reabre
 
-El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la interfaz, que devuelva un asunto `CLOSED` al estado `OPEN` ni que modifique un asunto existente. Una petición autenticada a `/api/matters/{matterId}` o `/api/clients/{clientId}` con un método no ofrecido (`PUT`, `PATCH`, `DELETE`) SHALL (DEBE) responder `405` con Problem Details `code` = `method-not-allowed`, cualquiera sea el rol (también un `LAWYER`), y el recurso SHALL (DEBE) permanecer sin cambios. La resolución del método precede a la autorización por rol porque no existe ninguna ruta para ese método, así que la precedencia `403 > 400` no aplica a estas peticiones.
+El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la interfaz, que devuelva un asunto `CLOSED` al estado `OPEN` ni que modifique un asunto existente. Una petición autenticada a `/api/matters/{matterId}` o `/api/clients/{clientId}` con un método no ofrecido (`PUT`, `PATCH`, `DELETE`) SHALL (DEBE) responder `405` con Problem Details `code` = `method-not-allowed`, cualquiera sea el rol (también un `LAWYER`), y el recurso SHALL (DEBE) permanecer sin cambios.
 
 #### Scenario: Intento de reabrir con PATCH
 
@@ -357,7 +357,7 @@ El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la in
 
 - **GIVEN** (Dado) un Abogado autenticado y un asunto con id `M`
 - **WHEN** (Cuando) envía `PATCH /api/matters/M`, `PUT /api/matters/M` o `DELETE /api/matters/M`
-- **THEN** (Entonces) la respuesta es `405` con `code` = `method-not-allowed` (no `403`)
+- **THEN** (Entonces) la respuesta es `405` con `code` = `method-not-allowed` (no `403`): la resolución del método precede a la autorización por rol porque no existe ninguna ruta para ese método, así que la precedencia `403 > 400` no aplica
 - **AND** el asunto permanece sin cambios
 
 #### Scenario: La interfaz no ofrece reabrir
@@ -368,7 +368,7 @@ El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la in
 
 ### Requirement: El Abogado solo puede leer
 
-El sistema SHALL (DEBE) permitir al rol `LAWYER` únicamente operaciones de lectura (`GET`) sobre clientes y asuntos. Cualquier escritura de un `LAWYER` (`POST /api/clients`, `POST /api/matters`, `POST /api/matters/{matterId}/close`) SHALL (DEBE) responder `403` con `code` = `forbidden` y SHALL NOT (NO DEBE) producir cambios. Cuando una petición incumple varias reglas, el sistema SHALL (DEBE) responder según esta precedencia: `401 unauthenticated` > `403 forbidden` > `400 validation-error` > `404 not-found` > `409`. Así, a un `LAWYER` se le responde `403` aunque el cuerpo sea inválido o el recurso no exista.
+El sistema SHALL (DEBE) permitir al rol `LAWYER` solo operaciones de lectura (`GET`) sobre clientes y asuntos. Cualquier escritura de un `LAWYER` (`POST` a `/api/clients`, `/api/matters` o `/api/matters/{matterId}/close`) SHALL (DEBE) responder `403` con `code` = `forbidden` y SHALL NOT (NO DEBE) producir cambios. Si una petición incumple varias reglas, SHALL (DEBE) responderse según esta precedencia: `401 unauthenticated` > `403 forbidden` > `400 validation-error` > `404 not-found` > `409`.
 
 #### Scenario: Abogado intenta crear un cliente
 
@@ -450,7 +450,7 @@ La interfaz SHALL (DEBE) ofrecer, a todo usuario autenticado, una pantalla **Asu
 
 ### Requirement: Formularios de alta solo para el Socio
 
-La interfaz SHALL (DEBE) mostrar al Socio los formularios **Nuevo cliente** (nombre, identificación tributaria) y **Nuevo asunto** (cliente, título, descripción), validar en el cliente los mismos límites de la API, mostrar los errores por campo y, al crear con éxito, mostrar el nuevo elemento en la lista. Si la API devuelve `409 client-tax-id-taken`, la interfaz SHALL (DEBE) mostrar el mensaje junto al campo de identificación tributaria. La interfaz SHALL NOT (NO DEBE) mostrar estos formularios ni sus botones de acceso a un Abogado.
+La interfaz SHALL (DEBE) mostrar al Socio los formularios **Nuevo cliente** (nombre, identificación tributaria) y **Nuevo asunto** (cliente, título, descripción), validar en el cliente los mismos límites de la API, mostrar los errores por campo y, al crear con éxito, mostrar el nuevo elemento en la lista. La interfaz SHALL NOT (NO DEBE) mostrar estos formularios ni sus botones de acceso a un Abogado.
 
 #### Scenario: Socio crea un cliente desde la pantalla
 
@@ -473,7 +473,7 @@ La interfaz SHALL (DEBE) mostrar al Socio los formularios **Nuevo cliente** (nom
 #### Scenario: Identificación tributaria duplicada en el formulario
 
 - **GIVEN** (Dado) un cliente existente con `taxId` = `0000000001` y un Socio con el formulario **Nuevo cliente** abierto
-- **WHEN** (Cuando) guarda con `taxId` = `0000000001`
+- **WHEN** (Cuando) guarda con `taxId` = `0000000001` y la API responde `409 client-tax-id-taken`
 - **THEN** (Entonces) el formulario sigue abierto y muestra un mensaje de identificación tributaria ya registrada junto a ese campo
 
 #### Scenario: Abogado no ve formularios de alta
@@ -484,7 +484,7 @@ La interfaz SHALL (DEBE) mostrar al Socio los formularios **Nuevo cliente** (nom
 
 ### Requirement: Cierre de asunto con confirmación en la interfaz
 
-La interfaz SHALL (DEBE) mostrar al Socio la acción **Cerrar asunto** solo en asuntos `Abierto` y SHALL (DEBE) pedir confirmación explícita, advirtiendo que el cierre es irreversible, antes de enviar la petición. Al confirmar, el asunto SHALL (DEBE) mostrarse como `Cerrado`; al cancelar, SHALL NOT (NO DEBE) enviarse ninguna petición. La acción SHALL NOT (NO DEBE) mostrarse a un Abogado ni en asuntos `Cerrado`. Si la API responde `409 matter-already-closed`, la interfaz SHALL (DEBE) mostrar el mensaje y actualizar el asunto como `Cerrado`.
+La interfaz SHALL (DEBE) mostrar al Socio la acción **Cerrar asunto** solo en asuntos `Abierto` y SHALL (DEBE) pedir confirmación explícita, advirtiendo que el cierre es irreversible, antes de enviar la petición. Al confirmar, el asunto SHALL (DEBE) mostrarse como `Cerrado`; al cancelar, SHALL NOT (NO DEBE) enviarse ninguna petición. La acción SHALL NOT (NO DEBE) mostrarse a un Abogado ni en asuntos `Cerrado`.
 
 #### Scenario: Socio confirma el cierre
 
@@ -501,7 +501,7 @@ La interfaz SHALL (DEBE) mostrar al Socio la acción **Cerrar asunto** solo en a
 #### Scenario: Asunto cerrado por otro Socio mientras tanto
 
 - **GIVEN** (Dado) un Socio que ve un asunto como `Abierto` que otro Socio ya cerró
-- **WHEN** (Cuando) pulsa **Cerrar asunto** y confirma
+- **WHEN** (Cuando) pulsa **Cerrar asunto**, confirma y la API responde `409 matter-already-closed`
 - **THEN** (Entonces) se muestra un mensaje indicando que el asunto ya estaba cerrado y el asunto pasa a mostrarse como `Cerrado`
 
 #### Scenario: Abogado no ve la acción de cierre

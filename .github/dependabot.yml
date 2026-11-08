@@ -13,10 +13,6 @@ updates:
       # Majors (TypeScript 7, ESLint 10, react-router 8, ...) se evalúan a mano con un ADR, no en el grupo.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
-      # Desde 1.14.1, `openspec validate --strict` rechaza requisitos de más de 500 caracteres y las
-      # specs vigentes tienen varios. Se libera cuando se partan esos requisitos (bitácora, PR #18).
-      - dependency-name: '@fission-ai/openspec'
-        versions: ['>= 1.14.1']
     commit-message:
       prefix: 'chore(deps)'
 

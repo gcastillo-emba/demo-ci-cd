@@ -5,6 +5,9 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: './tests',
+  // La evidencia visual (@evidencia) no corre por defecto: ver playwright.evidence.config.ts.
+  testIgnore: ['**/evidence/**', '**/support/**'],
+  grepInvert: /@evidencia/,
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

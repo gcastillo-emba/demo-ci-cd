@@ -1,11 +1,13 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, Ref } from 'react';
 
-type Variant = 'primary' | 'secondary';
+type Variant = 'primary' | 'secondary' | 'outline' | 'danger';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   /** Muestra el estado ocupado y desactiva el botón sin perder el foco. */
   busy?: boolean;
+  /** React 19: `ref` llega como prop y se reenvía al `<button>`. */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Button({

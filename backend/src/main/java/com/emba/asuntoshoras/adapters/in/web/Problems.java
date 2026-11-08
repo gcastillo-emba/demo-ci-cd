@@ -1,5 +1,6 @@
 package com.emba.asuntoshoras.adapters.in.web;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +27,7 @@ public final class Problems {
     return problem;
   }
 
-  /** Agrega errores de campo ({@code errors[]{field,message}}). */
+  /** Agrega errores de campo ({@code errors[]{field,message,code?}}). */
   public static ProblemDetail withErrors(ProblemDetail problem, List<FieldMessage> errors) {
     problem.setProperty(PROPERTY_ERRORS, errors);
     return problem;
@@ -38,6 +39,16 @@ public final class Problems {
     return id != null ? id : UUID.randomUUID().toString().replace("-", "");
   }
 
-  /** Error de un campo de la solicitud. */
-  public record FieldMessage(String field, String message) {}
+  /**
+   * Error de un campo de la solicitud. {@code code} es opcional (kebab-case, p. ej. {@code
+   * assistant-note-empty}); si es nulo no se serializa ({@code default-property-inclusion:
+   * non_null}).
+   */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record FieldMessage(String field, String message, String code) {
+
+    public FieldMessage(String field, String message) {
+      this(field, message, null);
+    }
+  }
 }

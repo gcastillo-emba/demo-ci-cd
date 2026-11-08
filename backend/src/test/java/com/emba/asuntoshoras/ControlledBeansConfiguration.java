@@ -1,10 +1,14 @@
 package com.emba.asuntoshoras;
 
+import com.emba.asuntoshoras.adapters.out.assistant.fake.FakeDescriptionAssistant;
 import com.emba.asuntoshoras.adapters.out.persistence.ClientPersistenceAdapter;
+import com.emba.asuntoshoras.application.fakes.ScriptedDescriptionAssistant;
 import com.emba.asuntoshoras.application.port.in.ClientUseCases.ClientFilter;
 import com.emba.asuntoshoras.application.port.in.PageQuery;
 import com.emba.asuntoshoras.application.port.in.PageResult;
 import com.emba.asuntoshoras.application.port.out.ClientRepository;
+import com.emba.asuntoshoras.application.port.out.FeatureFlags;
+import com.emba.asuntoshoras.config.AppProperties;
 import com.emba.asuntoshoras.domain.client.Client;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -21,7 +25,8 @@ import org.springframework.dao.DataAccessResourceFailureException;
 
 /**
  * Beans controlables para los IT que necesitan fijar "ahora" o simular una falla de la base: un
- * {@link MutableClock} y un {@link ClientRepository} que puede fallar en el próximo alta.
+ * {@link MutableClock} y un {@link ClientRepository} que puede fallar en el próximo alta. También
+ * el proveedor del asistente y el indicador {@code description-assistant} controlables (C4).
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class ControlledBeansConfiguration {
@@ -38,6 +43,49 @@ public class ControlledBeansConfiguration {
   @Primary
   FailingClientRepository failingClientRepository(ClientPersistenceAdapter delegate) {
     return new FailingClientRepository(delegate);
+  }
+
+  /**
+   * Proveedor del asistente controlable (add-description-assistant): por defecto delega en el
+   * adaptador {@code fake} real; los IT lo programan para devolver textos largos, vacíos, fallar o
+   * demorarse, y leen el pedido capturado.
+   */
+  @Bean
+  @Primary
+  ScriptedDescriptionAssistant scriptedDescriptionAssistant() {
+    return new ScriptedDescriptionAssistant(new FakeDescriptionAssistant());
+  }
+
+  /** Indicador {@code description-assistant} que los IT pueden apagar y restaurar. */
+  @Bean
+  @Primary
+  MutableFeatureFlags mutableFeatureFlags(AppProperties properties) {
+    return new MutableFeatureFlags(properties.features().descriptionAssistant());
+  }
+
+  /** Feature flags con valor modificable en caliente; {@link #reset()} vuelve al configurado. */
+  public static final class MutableFeatureFlags implements FeatureFlags {
+
+    private final boolean configured;
+    private final AtomicBoolean descriptionAssistant;
+
+    MutableFeatureFlags(boolean configured) {
+      this.configured = configured;
+      this.descriptionAssistant = new AtomicBoolean(configured);
+    }
+
+    public void setDescriptionAssistant(boolean enabled) {
+      descriptionAssistant.set(enabled);
+    }
+
+    public void reset() {
+      descriptionAssistant.set(configured);
+    }
+
+    @Override
+    public boolean descriptionAssistantEnabled() {
+      return descriptionAssistant.get();
+    }
   }
 
   /** Reloj que los tests pueden mover (sin {@code Thread.sleep}). */

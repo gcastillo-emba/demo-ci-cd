@@ -1,5 +1,7 @@
 package com.emba.asuntoshoras.adapters.in.web;
 
+import com.emba.asuntoshoras.domain.assistant.AssistantUnavailableException;
+import com.emba.asuntoshoras.domain.assistant.FeatureDisabledException;
 import com.emba.asuntoshoras.domain.client.ClientNotFoundException;
 import com.emba.asuntoshoras.domain.client.ClientTaxIdTakenException;
 import com.emba.asuntoshoras.domain.matter.MatterAlreadyClosedException;
@@ -98,7 +100,14 @@ public class ProblemCatalog {
           // add-hours-dashboard (design D2): validación de la ventana con errors[] por campo.
           Map.entry(
               DomainValidationException.class,
-              new Entry(HttpStatus.BAD_REQUEST, "Solicitud inválida")));
+              new Entry(HttpStatus.BAD_REQUEST, "Solicitud inválida")),
+          // add-description-assistant (design D8)
+          Map.entry(
+              FeatureDisabledException.class,
+              new Entry(HttpStatus.NOT_FOUND, "Funcionalidad no disponible")),
+          Map.entry(
+              AssistantUnavailableException.class,
+              new Entry(HttpStatus.SERVICE_UNAVAILABLE, "Asistente no disponible")));
 
   /** Entrada exacta o, en su defecto, la de la superclase más cercana. */
   public Optional<Entry> find(Class<?> exceptionType) {

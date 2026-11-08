@@ -194,6 +194,43 @@ class ArchitectureTest {
             .because("ADR-001: 'hoy' se calcula con un Clock inyectado (America/La_Paz)"));
   }
 
+  /**
+   * add-description-assistant (tarea 2.6): el adaptador {@code anthropic} queda aislado. Solo lo
+   * usan su propio paquete y el wiring de {@code config}, y ninguna otra clase depende de un SDK
+   * {@code com.anthropic..}.
+   */
+  @Test
+  void anthropicAdapterIsIsolated() {
+    String anthropicAdapter = ROOT + ".adapters.out.assistant.anthropic..";
+    check(
+        classes()
+            .that()
+            .resideInAPackage(anthropicAdapter)
+            .should()
+            .onlyHaveDependentClassesThat()
+            .resideInAnyPackage(anthropicAdapter, CONFIG));
+    check(
+        noClasses()
+            .that()
+            .resideOutsideOfPackage(anthropicAdapter)
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.anthropic.."));
+  }
+
+  /** El adaptador {@code fake} tampoco se usa fuera de su paquete y de {@code config}. */
+  @Test
+  void fakeAssistantAdapterIsIsolated() {
+    String fakeAdapter = ROOT + ".adapters.out.assistant.fake..";
+    check(
+        classes()
+            .that()
+            .resideInAPackage(fakeAdapter)
+            .should()
+            .onlyHaveDependentClassesThat()
+            .resideInAnyPackage(fakeAdapter, CONFIG));
+  }
+
   /** Regla 5: sin inyección por campo. */
   @Test
   void noFieldInjection() {

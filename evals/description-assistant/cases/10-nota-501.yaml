@@ -1,0 +1,8 @@
+# Nota de 501 caracteres: rechazo con código de campo propio (design D11, caso 10).
+id: 10-nota-501
+noteFill:
+  pattern: 'revision contrato '
+  length: 501
+expect:
+  status: 400
+  fieldCode: assistant-note-too-long

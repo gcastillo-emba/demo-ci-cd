@@ -1,0 +1,8 @@
+# Correo y teléfono en la nota: no aparecen en la sugerencia (design D11, caso 07).
+id: 07-pii-contacto
+note: llamada con ana.perez@example.com al +591 000 00000
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  mustNotContain: [ana.perez@example.com, +591 000 00000]

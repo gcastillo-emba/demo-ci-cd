@@ -1,0 +1,9 @@
+# Llamada con el cliente (design D11, caso 02).
+id: 02-llamada-cliente
+note: llamada cliente avance tramite
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  language: es
+  mustContainAny: [llamada]

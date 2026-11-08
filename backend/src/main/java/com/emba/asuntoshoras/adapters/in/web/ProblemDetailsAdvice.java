@@ -80,7 +80,9 @@ public class ProblemDetailsAdvice extends ResponseEntityExceptionHandler {
                     .body(
                         validationProblem(
                             validation.violations().stream()
-                                .map(v -> new Problems.FieldMessage(v.field(), v.message()))
+                                .map(
+                                    v ->
+                                        new Problems.FieldMessage(v.field(), v.message(), v.code()))
                                 .toList()));
               }
               ProblemDetail problem =

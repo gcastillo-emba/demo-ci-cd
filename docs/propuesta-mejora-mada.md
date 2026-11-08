@@ -18,7 +18,7 @@ Mejoras a la metodología que salen de la [bitácora de fallas](bitacora-fallas.
 | Gate propuesto                                     | Falla que lo origina                                                                                                                  | Dónde                                                                                                                                                                |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Prueba de que un gate nuevo puede fallar**       | ArchUnit reportó 0 tests y pasó en verde sin evaluar nada (fila 14).                                                                  | Checklist del revisor y de `devops`: cada gate nuevo se entrega con un caso que **debe** fallar; `gate.mjs` trata "0 tests" como falla.                              |
-| **Gate no ejecutado ≠ verde**                      | CodeQL con 504 (fila 47); el subagente `seguridad` lo detectó a mano.                                                                 | `merge-si-verde.mjs`: exigir que los jobs de CodeQL de ambos lenguajes estén en `success` para el SHA de cabecera, no solo `ci-ok`.                                  |
+| **Gate no ejecutado ≠ verde**                      | CodeQL con 504 (fila 51); el subagente `seguridad` lo detectó a mano.                                                                 | `merge-si-verde.mjs`: exigir que los jobs de CodeQL de ambos lenguajes estén en `success` para el SHA de cabecera, no solo `ci-ok`.                                  |
 | **Aritmética de escenarios límite en spec-review** | Escenario imposible en C2 (10 h + edición a 14 h = 24 h, que el límite inclusivo admite; fila 27); `validate --strict` no lo ve.      | Checklist del `revisor` en modo spec-review: recalcular cada escenario numérico contra los bordes inclusivos/exclusivos de los demás escenarios del mismo requisito. |
 | **Orden de migraciones repetibles**                | Seed `R__` que corre antes que su dependencia por orden alfabético (fila 29).                                                         | Test de backend que arranca Flyway sobre una base vacía con el perfil `demo` (ya lo cubre el IT si existe con ese perfil; hacerlo explícito).                        |
 | **Evidencia filtrada por capacidad**               | La evidencia de C2 reescribió los PNG archivados de C1 (fila 30).                                                                     | `npm run evidence -- <cambio>` falla si modifica archivos fuera de `docs/evidence/<cambio>/`.                                                                        |
@@ -30,7 +30,7 @@ Mejoras a la metodología que salen de la [bitácora de fallas](bitacora-fallas.
 
 > **Regla.** Cada PR independiente se trabaja en **una sesión enlazada propia, en su propio worktree**, creada por el orquestador desde `origin/main`. Los **subagentes y los workflows** se usan **solo para paralelismo dentro del mismo cambio** (backend ∥ frontend, revisor y seguridad). El **orquestador** coordina el **orden de merge** y los **rebases `--onto`** cuando un PR depende de otro.
 
-Origen: PRs apilados que hubo que reemplazar (fila 44), colisiones entre flujos paralelos (filas 22, 25, 45) y contexto del orquestador saturado por trabajo independiente. Desde F5 se aplicó así (runbook, fixes, migración de CodeQL, triage de Dependabot, F6) sin PRs reemplazados.
+Origen: PRs apilados que hubo que reemplazar (fila 48), colisiones entre flujos paralelos (filas 22, 25, 49) y contexto del orquestador saturado por trabajo independiente. Desde F5 se aplicó así (runbook, fixes, migración de CodeQL, triage de Dependabot, F6) sin PRs reemplazados.
 
 Consecuencias:
 
@@ -40,7 +40,7 @@ Consecuencias:
 
 ### 2.2 Provisionar en F0 los permisos de los gates de juicio
 
-Origen: el clasificador del modo auto bloqueó `gh pr comment`/`gh pr edit` del revisor aun con autorización en el chat (fila 48); C2 esperó ≈ 4 h.
+Origen: el clasificador del modo auto bloqueó `gh pr comment`/`gh pr edit` del revisor aun con autorización en el chat (fila 52); C2 esperó ≈ 4 h.
 
 - En F0, agregar a `.claude/settings.json` (versionado, no `settings.local.json`) reglas `allow` mínimas y acotadas: `gh pr comment`, `gh pr edit --add-label revisor:aprobado|seguridad:ok`, `gh pr view`, `gh pr checks`, `gh api` de solo lectura sobre el repo.
 - Nunca `gh pr merge` (lo bloquea `guard-git-push`; el merge es de `merge-si-verde.mjs`).
@@ -52,7 +52,7 @@ Origen: subagentes no disponibles a mitad de sesión (fila 8). La capa (agentes,
 
 ### 2.4 Numeración de la bitácora con PRs en paralelo
 
-Origen: con varios PRs abiertos a la vez, cada uno agrega filas "al final" con el siguiente número que ve en su rama; los números chocan al fusionar (C4 usó 35–41 mientras F6 esperaba con sus filas, que terminaron como 42–48), y algunas fallas quedaron sin registrar hasta F6 (`.mada/pendientes-bitacora.md`).
+Origen: con varios PRs abiertos a la vez, cada uno agrega filas "al final" con el siguiente número que ve en su rama; los números chocan al fusionar (C4 terminó usando 35–42 y las filas de F6, escritas como 42–48, hubo que renumerarlas a 43–49 al rebasar), y algunas fallas quedaron sin registrar hasta F6 (`.mada/pendientes-bitacora.md`).
 
 Propuesta (elegir una en el próximo F0):
 
@@ -63,11 +63,11 @@ En ambos casos, cada sesión registra sus fallas en su propio PR (no en un archi
 
 ### 2.5 Enmiendas de ADR
 
-Origen: ADR-006/ADR-003 editados in situ (fila 46). Ya aplicado en F6: `docs/adr/README.md` distingue **enmienda** (línea `Revisado: fecha (PR #N)`) de **cambio de decisión** (ADR nuevo que reemplaza). La skill `adr` debe ofrecer el modo "enmienda".
+Origen: ADR-006/ADR-003 editados in situ (fila 50). Ya aplicado en F6: `docs/adr/README.md` distingue **enmienda** (línea `Revisado: fecha (PR #N)`) de **cambio de decisión** (ADR nuevo que reemplaza). La skill `adr` debe ofrecer el modo "enmienda".
 
 ### 2.6 Las instrucciones citan, no parafrasean
 
-Origen: nombres de migración y seed distintos a los de `tasks.md` (fila 20), scopes inventados (fila 42), `useFeatures()` "que ya existía" pero no existía (fila 39), clave del indicador con dos grafías (fila 41).
+Origen: nombres de migración y seed distintos a los de `tasks.md` (fila 20), scopes inventados (fila 46), `useFeatures()` "que ya existía" pero no existía (fila 39), clave del indicador con dos grafías (fila 41).
 
 - El prompt del orquestador enlaza los artefactos (`tasks.md`, `design.md`, AGENTS.md §5 para los scopes) en vez de resumirlos; ante conflicto gana el artefacto.
 - El `redactor-specs` verifica contra el código cada afirmación "ya existe" del design.
@@ -92,7 +92,7 @@ Origen: `fases.jsonl` sin `fin` para F3, C1 y C3; el script de métricas debe in
 
 1. Plan y visibilidad de GitHub verificados (fila 1); secretos provistos o modo degradado explícito (fila 2).
 2. Subcomandos reales de cada CLI verificados (filas 3, 5) y scripts npm probados en Windows (fila 4).
-3. Capa `.claude/` commiteada **antes** de la sesión orquestadora (fila 8), con reglas `allow` de los gates de juicio y un ensayo sobre un PR de prueba (fila 48).
+3. Capa `.claude/` commiteada **antes** de la sesión orquestadora (fila 8), con reglas `allow` de los gates de juicio y un ensayo sobre un PR de prueba (fila 52).
 4. Acciones fijadas por SHA desde el primer workflow (fila 10).
-5. Candado de recursos compartidos y `run.mjs` desde el primer commit (filas 16, 45).
+5. Candado de recursos compartidos y `run.mjs` desde el primer commit (filas 16, 49).
 6. Regla de sesiones (§2.1) y esquema de numeración de la bitácora (§2.4) decididos.

@@ -26,10 +26,12 @@
     "frontend:build": "npm run build -w frontend",
     "evals": "node scripts/evals.mjs",
     "e2e": "node scripts/e2e.mjs",
+    "demo:check": "node scripts/demo-check.mjs",
     "hooks:test": "node --test \".claude/hooks/test/*.test.mjs\"",
     "scripts:test": "node --test \"scripts/test/*.test.mjs\"",
     "format:check": "prettier --check \"**/*.{md,json,yml,yaml,mjs}\"",
-    "gate": "node scripts/gate.mjs"
+    "gate": "node scripts/gate.mjs",
+    "bitacora:resumen": "node scripts/claude-resumen-bitacora.mjs"
   },
   "devDependencies": {
     "@fission-ai/openspec": "1.12.0",

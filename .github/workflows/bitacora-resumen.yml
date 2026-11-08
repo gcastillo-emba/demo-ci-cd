@@ -1,0 +1,63 @@
+# Resumen ejecutivo de la bitácora con Claude Code en modo headless (capacidad 11). Solo manual.
+# Corre scripts/claude-resumen-bitacora.mjs (`claude -p`, solo Read, máx. 3 turnos) y sube
+# docs/bitacora-resumen.md como artefacto. No hace commits desde CI.
+# INERTE sin el secreto ANTHROPIC_API_KEY (hoy no provisto: bitácora #2): el guard solo expone
+# un booleano y la clave llega únicamente al paso que ejecuta el script.
+name: Resumen de la bitácora (headless)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitacora-resumen
+  cancel-in-progress: true
+
+jobs:
+  resumen:
+    name: resumen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Guard del secreto
+        id: guard
+        env:
+          K: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$K" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY no está configurado: el resumen headless se omite."
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.guard.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias y Claude Code (versión fijada)
+        if: steps.guard.outputs.ok == 'true'
+        run: |
+          npm ci
+          npm i -g @anthropic-ai/claude-code@2.1.310
+          claude --version
+      - name: Resumen headless
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run bitacora:resumen
+      - name: Subir el resumen
+        if: steps.guard.outputs.ok == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bitacora-resumen
+          path: docs/bitacora-resumen.md
+          if-no-files-found: error
+          retention-days: 14

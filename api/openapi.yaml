@@ -27,6 +27,10 @@ info:
     C3 (`add-hours-dashboard`): tablero con el resumen agregado de horas aprobadas y pendientes
     por asunto y por abogado (etiqueta `dashboard`).
 
+    C4 (`add-description-assistant`): asistente que sugiere la descripción de un registro de
+    horas a partir de una nota libre, detrás del indicador `descriptionAssistant` (etiqueta
+    `assistant`). La sugerencia no se persiste: el abogado la acepta, edita o descarta.
+
     Convenciones de listados compartidas:
 
     - `page` (base 0, máximo 10000) y `size` (1 a 100, por defecto 20); fuera de rango o no
@@ -68,6 +72,11 @@ tags:
     description: |
       Tablero (C3). Resumen agregado de horas para ambos roles; el `PARTNER` ve a todos los
       abogados y el `LAWYER` solo sus propias horas.
+  - name: assistant
+    description: |
+      Asistente de descripción (C4). Solo `LAWYER` y solo con el indicador
+      `descriptionAssistant` encendido; con el indicador apagado responde
+      `404 feature-disabled` a cualquier rol.
 security:
   - bearerAuth: []
 paths:
@@ -847,6 +856,148 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/assistant/description-suggestions:
+    post:
+      tags: [assistant]
+      operationId: suggestDescription
+      summary: Sugerir descripción de un registro de horas
+      description: |
+        Devuelve una descripción profesional en español (como máximo 300 caracteres, sin saltos
+        de línea, correos ni teléfonos) sugerida a partir de una nota libre del abogado. No crea
+        ni modifica registros: la sugerencia no se persiste. `provider` identifica al adaptador
+        que la generó (`fake` por defecto, determinista; `anthropic` opcional).
+
+        Precedencia de verificaciones (sin invocar al proveedor salvo en el último paso):
+
+        1. Sin token o token inválido → `401 unauthenticated`.
+        2. Indicador `descriptionAssistant` apagado → `404 feature-disabled` para cualquier rol
+           (incluido `PARTNER`): el endpoint es indistinguible de uno inexistente.
+        3. Rol distinto de `LAWYER` → `403 forbidden` (aunque el cuerpo sea inválido).
+        4. Validación → `400 validation-error`: `note` se recorta antes de validar; ausente, vacía
+           o solo con espacios agrega `errors[]` con `field: note` y `code: assistant-note-empty`;
+           más de 500 caracteres (code points, tras el recorte) agrega `field: note` y
+           `code: assistant-note-too-long`; `matterId` que no es UUID agrega `field: matterId`.
+        5. `matterId` de un asunto inexistente → `404 not-found` (cualquier estado del asunto es
+           válido; solo se usa su código como contexto, nunca datos del cliente).
+        6. Proveedor que no responde en el tiempo límite (8 s por defecto), falla o devuelve un
+           texto vacío → `503 assistant-unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DescriptionSuggestionRequest'
+            example:
+              note: reunion cliente revisar contrato arrendamiento
+              matterId: 3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718
+      responses:
+        '200':
+          description: Sugerencia generada (no persistida).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionSuggestionResponse'
+              example:
+                suggestion: Reunión con el cliente para revisar el contrato de arrendamiento.
+                provider: fake
+        '400':
+          description: |
+            La solicitud no cumple las validaciones (`code` = `validation-error`). Para `note`,
+            `errors[].code` es `assistant-note-empty` (ausente, vacía o solo espacios) o
+            `assistant-note-too-long` (más de 500 caracteres tras el recorte). Un `matterId` que
+            no es UUID agrega un elemento con `field: matterId`. No se invoca al proveedor.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                noteEmpty:
+                  summary: Nota vacía
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: note
+                        code: assistant-note-empty
+                        message: Escribe una nota breve antes de pedir una sugerencia.
+                noteTooLong:
+                  summary: Nota de más de 500 caracteres
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: note
+                        code: assistant-note-too-long
+                        message: La nota admite como máximo 500 caracteres.
+                invalidMatterId:
+                  summary: matterId con formato inválido
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: matterId
+                        message: Tiene un formato inválido.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: |
+            `code` = `feature-disabled` si el indicador `descriptionAssistant` está apagado
+            (cualquier rol, se evalúa antes del rol), o `code` = `not-found` si `matterId` no
+            corresponde a un asunto existente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                featureDisabled:
+                  summary: Asistente deshabilitado
+                  value:
+                    type: https://asuntos-horas.example/problems/feature-disabled
+                    title: Funcionalidad no disponible
+                    status: 404
+                    detail: El asistente de descripción no está habilitado.
+                    code: feature-disabled
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                matterNotFound:
+                  summary: Asunto inexistente
+                  value:
+                    type: https://asuntos-horas.example/problems/not-found
+                    title: Recurso no encontrado
+                    status: 404
+                    detail: El recurso solicitado no existe.
+                    code: not-found
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          description: |
+            El proveedor no respondió en el tiempo límite, falló o devolvió un texto vacío
+            (`code` = `assistant-unavailable`). La descripción puede escribirse manualmente.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/assistant-unavailable
+                title: Asistente no disponible
+                status: 503
+                detail: El asistente no está disponible en este momento; puedes escribir la descripción manualmente.
+                code: assistant-unavailable
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
 components:
   securitySchemes:
     bearerAuth:
@@ -1135,7 +1286,9 @@ components:
       properties:
         descriptionAssistant:
           type: boolean
-          description: Asistente de descripción (C4) habilitado.
+          description: |
+            Asistente de descripción (C4) habilitado (`app.features.description-assistant`):
+            `false` por defecto en producción y `true` en el perfil `demo`.
     Problem:
       type: object
       description: Detalle de error RFC 9457.
@@ -1177,6 +1330,13 @@ components:
       properties:
         field:
           type: string
+        code:
+          type: string
+          description: |
+            Opcional. Código estable en inglés (kebab-case) del error de este campo, cuando la
+            operación lo define (p. ej. `assistant-note-empty`, `assistant-note-too-long` en
+            `suggestDescription`). Su ausencia no cambia el significado de `field` y `message`.
+          pattern: '^[a-z][a-z0-9-]*$'
         message:
           type: string
           description: Mensaje en español.
@@ -1627,3 +1787,45 @@ components:
             la fila propia (`LAWYER`).
           items:
             $ref: '#/components/schemas/LawyerHoursRow'
+    DescriptionSuggestionRequest:
+      type: object
+      description: |
+        Nota libre del abogado para sugerir una descripción. `note` es obligatoria en la práctica,
+        pero el esquema no la marca como requerida ni fija `minLength`/`maxLength`: la ausencia,
+        el vacío (tras recortar) y el exceso de 500 caracteres los resuelve el guardrail del
+        servidor con `400 validation-error` y `errors[].code` propio (`assistant-note-empty`,
+        `assistant-note-too-long`). Las propiedades desconocidas se ignoran.
+      properties:
+        note:
+          type: string
+          description: |
+            Nota libre (se recorta antes de validar; de 1 a 500 caracteres Unicode tras el
+            recorte). Se trata solo como datos, nunca como instrucciones; los correos y teléfonos
+            se redactan antes de llegar al proveedor.
+          examples: [reunion cliente revisar contrato arrendamiento]
+        matterId:
+          type: string
+          format: uuid
+          description: |
+            Opcional. Asunto existente (cualquier estado) usado solo como contexto (su código).
+            Formato inválido responde `400 validation-error`; inexistente, `404 not-found`.
+    DescriptionSuggestionResponse:
+      type: object
+      additionalProperties: false
+      required: [suggestion, provider]
+      properties:
+        suggestion:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: |
+            Descripción sugerida en español: no vacía, como máximo 300 caracteres Unicode, sin
+            saltos de línea y sin correos ni teléfonos (reemplazados por `[correo]` /
+            `[teléfono]`). Texto plano: la interfaz no debe interpretarlo como HTML ni Markdown.
+          examples: [Reunión con el cliente para revisar el contrato de arrendamiento.]
+        provider:
+          $ref: '#/components/schemas/AssistantProvider'
+    AssistantProvider:
+      type: string
+      description: Adaptador que generó la sugerencia (`fake` determinista por defecto).
+      enum: [fake, anthropic]

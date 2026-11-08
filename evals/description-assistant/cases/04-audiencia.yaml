@@ -1,0 +1,9 @@
+# Audiencia sin nombres propios inventados (design D11, caso 04).
+id: 04-audiencia
+note: audiencia preliminar juzgado
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  mustContainAny: [audiencia]
+  noNewProperNames: true

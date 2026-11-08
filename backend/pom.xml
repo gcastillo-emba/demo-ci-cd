@@ -200,6 +200,12 @@
           <excludes>
             <exclude>**/*IT.java</exclude>
           </excludes>
+          <systemPropertyVariables>
+            <!-- Socket Unix de los selectores NIO (HttpClient, HttpServer de prueba) fuera de
+                 %TEMP%: con la ruta corta 8.3 del perfil de Windows falla con "Unable to establish
+                 loopback connection" (bitácora). Inocuo en Linux/CI. -->
+            <jdk.net.unixdomain.tmpdir>${project.build.directory}</jdk.net.unixdomain.tmpdir>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
 
@@ -210,6 +216,9 @@
           <includes>
             <include>**/*IT.java</include>
           </includes>
+          <systemPropertyVariables>
+            <jdk.net.unixdomain.tmpdir>${project.build.directory}</jdk.net.unixdomain.tmpdir>
+          </systemPropertyVariables>
         </configuration>
         <executions>
           <execution>
@@ -300,4 +309,46 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Evals del asistente de descripción (add-description-assistant D11): solo
+         DescriptionAssistantEvalsIT (etiqueta "evals"), con el proveedor que indique
+         APP_ASSISTANT_PROVIDER (fake por defecto). Es un runner aparte: el `verify` normal sigue
+         ejecutando TODOS los tests (incluidas las evals) con JaCoCo y Spotless; aquí solo se omiten
+         los unitarios y el umbral de cobertura, que no tiene sentido sobre un único IT. -->
+    <profile>
+      <id>evals</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <groups>evals</groups>
+              <failIfNoTests>true</failIfNoTests>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check</id>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

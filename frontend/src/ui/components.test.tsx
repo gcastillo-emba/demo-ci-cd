@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -37,15 +37,23 @@ describe('Pagination', () => {
 
 describe('SearchInput', () => {
   it('aplica debounce: una sola búsqueda con el texto recortado tras dejar de escribir', async () => {
+    // Cada "tecla" es un change síncrono: entre ellas no pasa tiempo real, así que el debounce no
+    // puede disparar a mitad de la escritura. Con user.type y timers reales, una máquina cargada
+    // tardaba más de 50 ms entre teclas y el test fallaba de forma intermitente (bitácora #26).
     const onSearch = vi.fn();
-    const user = userEvent.setup();
     render(<SearchInput label="Buscar" value="" onSearch={onSearch} delay={50} />);
+    const input = screen.getByRole('searchbox', { name: 'Buscar' });
 
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar' }), ' andin ');
+    for (const partial of [' ', ' a', ' an', ' and', ' andi', ' andin', ' andin ']) {
+      fireEvent.change(input, { target: { value: partial } });
+    }
+    expect(input).toHaveValue(' andin ');
     expect(onSearch).not.toHaveBeenCalled();
 
     await waitFor(() => expect(onSearch).toHaveBeenCalledTimes(1));
     expect(onSearch).toHaveBeenCalledWith('andin');
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(onSearch).toHaveBeenCalledTimes(1);
   });
 
   it('no busca si el texto coincide con el valor confirmado y refleja cambios externos', async () => {

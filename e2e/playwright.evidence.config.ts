@@ -4,6 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 // Guardan capturas en docs/evidence/<cambio>/ para enlazarlas en el PR. Requiere el stack arriba.
 export default defineConfig({
   testDir: './tests/evidence',
+  // UN login por rol y storageState en e2e/.auth/ (rate limiting del login en nginx, ADR-006).
+  globalSetup: './global-setup.ts',
   grep: /@evidencia/,
   fullyParallel: false,
   workers: 1,

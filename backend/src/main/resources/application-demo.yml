@@ -5,7 +5,9 @@ spring:
 
 app:
   jwt:
-    # Valor de demostración, público y sin valor real. NUNCA usarlo en producción.
-    secret: ${APP_JWT_SECRET:solo-demo-no-usar-en-produccion-asuntos-horas-2026}
+    # ÚNICO lugar donde se define el secreto FALSO de demo (ADR-006): lo usan compose (que solo
+    # pasa APP_JWT_SECRET si está definido en el entorno), `npm run dev` y los IT. Valor público y
+    # sin valor real. NUNCA usarlo en producción; fuera del perfil demo no hay valor por defecto.
+    secret: ${APP_JWT_SECRET:solo-demo-no-usar-en-produccion-0123456789abcdef}
   features:
     description-assistant: true

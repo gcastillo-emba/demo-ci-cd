@@ -29,7 +29,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-asuntos}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-asuntos}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-asuntos-dev}
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-solo-demo-no-usar-en-produccion-0123456789abcdef}
+      # Sin valor: se pasa APP_JWT_SECRET del entorno solo si está definido. El secreto FALSO de
+      # demo vive en un único lugar, application-demo.yml (perfil demo); ADR-006.
+      APP_JWT_SECRET:
     depends_on:
       postgres:
         condition: service_healthy

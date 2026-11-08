@@ -9,6 +9,8 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+# storageState de los E2E (tokens de demo generados en cada corrida)
+e2e/.auth/
 # local state (MADA runtime, gate)
 .mada/
 .gate/

@@ -40,16 +40,16 @@ class AuthenticationServiceTest {
           false);
 
   private FakeTokenIssuer tokenIssuer;
+  private PlainTextPasswordHasher hasher;
   private AuthenticationService service;
 
   @BeforeEach
   void setUp() {
     tokenIssuer = new FakeTokenIssuer();
+    hasher = new PlainTextPasswordHasher();
     service =
         new AuthenticationService(
-            new InMemoryUserRepository().with(PARTNER).with(INACTIVE),
-            new PlainTextPasswordHasher(),
-            tokenIssuer);
+            new InMemoryUserRepository().with(PARTNER).with(INACTIVE), hasher, tokenIssuer);
   }
 
   @Test
@@ -73,6 +73,34 @@ class AuthenticationServiceTest {
   void unknownEmailIsInvalidCredentials() {
     assertThatThrownBy(() -> service.authenticate("nadie@asuntos.test", PASSWORD))
         .isInstanceOf(InvalidCredentialsException.class);
+  }
+
+  @Test
+  void unknownEmailStillRunsADummyPasswordCheck() {
+    assertThatThrownBy(() -> service.authenticate("nadie@asuntos.test", PASSWORD))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    // Anti-enumeración por tiempo: el hasher se invoca aunque el email no exista.
+    assertThat(hasher.dummyChecks()).isEqualTo(1);
+    assertThat(hasher.matchesCalls()).isZero();
+    assertThat(tokenIssuer.issuedTo()).isEmpty();
+  }
+
+  @Test
+  void malformedEmailStillRunsADummyPasswordCheck() {
+    assertThatThrownBy(() -> service.authenticate("no-es-email", PASSWORD))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    assertThat(hasher.dummyChecks()).isEqualTo(1);
+  }
+
+  @Test
+  void existingEmailUsesTheRealCheckAndNoDummy() {
+    assertThatThrownBy(() -> service.authenticate("socia@asuntos.test", "otra"))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    assertThat(hasher.matchesCalls()).isEqualTo(1);
+    assertThat(hasher.dummyChecks()).isZero();
   }
 
   @Test

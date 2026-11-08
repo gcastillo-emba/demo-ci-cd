@@ -102,6 +102,7 @@ Todo agente termina su trabajo con este bloque:
 - **Nunca** `git push --force`, push a `main`, push de tags ni `gh pr merge` fuera de `scripts/merge-si-verde.mjs`.
 - Commits y títulos de PR en **Conventional Commits** con scopes `c1|c2|c3|c4|api|spec|ci|docs|deps|skeleton|release` (los mismos que valida `.github/workflows/pr-title.yml`).
 - **Un PR por cambio OpenSpec** (excepción documentada: F2 agrupa las 4 propuestas).
+- Los mensajes de las excepciones de dominio (`DomainException` y subclases), que se publican como `detail` del Problem, **NO DEBEN** interpolar entrada del usuario ni datos internos (ids, emails, valores recibidos, SQL, nombres de clases, trazas). Son textos fijos en español; el contexto va a los logs, nunca a la respuesta.
 - No editar archivos generados (`frontend/src/api/generated/**`, `.claude/skills/openspec-*`, `.claude/commands/opsx/*`).
 - Todo spawn desde scripts Node pasa por `scripts/lib/run.mjs`.
 

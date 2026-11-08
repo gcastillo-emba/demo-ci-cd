@@ -43,6 +43,7 @@ flowchart TB
 - **Mismo origen:** el navegador solo habla con nginx en `:8080`; `/api/*` se reenvía a `api:8081`. No se configura CORS.
 - **Healthchecks en cadena:** db (`pg_isready`) → api (`/api/actuator/health`) → spa. `compose up --wait` los usa en E2E y CI.
 - **Imágenes:** `ghcr.io/gcastillo-emba/demo-ci-cd-backend` y `-frontend` (ADR-003).
-- **Secretos:** `APP_JWT_SECRET` por variable de entorno; default de desarrollo solo en compose (ADR-006).
+- **Secretos:** `APP_JWT_SECRET` por variable de entorno; el único default (falso, de desarrollo) está en el perfil `demo` (`application-demo.yml`); compose solo lo pasa si está definido (ADR-006).
+- **Puertos en el host (compose local):** 8080 en todas las interfaces; 8081 y 5432 solo en `127.0.0.1` (para `npm run dev` y depuración). nginx limita el login a 5 intentos por minuto por IP (ADR-006).
 - **Asistente de descripción:** el flag se expone en `GET /api/features`; con el flag apagado la UI oculta la funcionalidad.
 - Contexto: [c4-contexto.md](c4-contexto.md).

@@ -83,6 +83,32 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: 'Ingresar' })).toBeEnabled();
   });
 
+  it('ante un 429 del rate limiting muestra el mensaje en español y no guarda token', async () => {
+    mockFetch({
+      'POST /api/auth/login': () =>
+        problemResponse({
+          type: 'https://asuntos-horas.example/problems/too-many-requests',
+          title: 'Demasiados intentos',
+          status: 429,
+          detail: 'Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.',
+          code: 'too-many-requests',
+          traceId: '',
+        }),
+    });
+    const user = userEvent.setup();
+    renderApp('/login');
+
+    await user.type(await screen.findByLabelText(/email/i), 'socia@asuntos.test');
+    await user.type(screen.getByLabelText(/contraseña/i), 'Demo2026!');
+    await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.',
+    );
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ingresar' })).toBeEnabled();
+  });
+
   it('muestra un mensaje genérico en español si el servidor no responde', async () => {
     mockFetch({
       'POST /api/auth/login': () => {

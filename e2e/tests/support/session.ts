@@ -8,14 +8,13 @@ export const ABOGADO = {
   fullName: 'Abogado Uno',
 };
 
-export async function login(
-  page: Page,
-  user: { email: string; password: string; fullName: string },
-) {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(user.email);
-  await page.getByLabel('Contraseña').fill(user.password);
-  await page.getByRole('button', { name: 'Ingresar' }).click();
+/**
+ * Abre el inicio con la sesión ya cargada desde el storageState del rol (ver support/auth.ts) y
+ * verifica el usuario. No inicia sesión: el login real solo lo ejercita login.spec.ts, por el rate
+ * limiting de nginx (ADR-006).
+ */
+export async function openHome(page: Page, user: { fullName: string }) {
+  await page.goto('/');
   await expect(
     page.getByRole('heading', { level: 1, name: `Bienvenido/a, ${user.fullName}` }),
   ).toBeVisible();

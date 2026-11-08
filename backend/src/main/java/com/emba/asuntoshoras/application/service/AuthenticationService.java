@@ -13,7 +13,9 @@ import java.util.Optional;
 
 /**
  * Inicio de sesión. Cualquier fallo (email mal formado, inexistente, contraseña errónea o usuario
- * inactivo) produce la misma {@link InvalidCredentialsException}.
+ * inactivo) produce la misma {@link InvalidCredentialsException}. Si el email no existe se ejecuta
+ * igualmente una verificación de contraseña ficticia, para no revelar por tiempo qué cuentas
+ * existen.
  */
 public class AuthenticationService implements AuthenticateUseCase {
 
@@ -33,12 +35,16 @@ public class AuthenticationService implements AuthenticateUseCase {
     if (password == null || password.isEmpty()) {
       throw new InvalidCredentialsException();
     }
-    User user =
-        parseEmail(email)
-            .flatMap(users::findByEmail)
-            .filter(candidate -> passwordHasher.matches(password, candidate.passwordHash()))
-            .filter(User::isActive)
-            .orElseThrow(InvalidCredentialsException::new);
+    Optional<User> candidate = parseEmail(email).flatMap(users::findByEmail);
+    if (candidate.isEmpty()) {
+      // Anti-enumeración: se paga el mismo costo de BCrypt que con un email existente.
+      passwordHasher.dummyCheck(password);
+      throw new InvalidCredentialsException();
+    }
+    User user = candidate.get();
+    if (!passwordHasher.matches(password, user.passwordHash()) || !user.isActive()) {
+      throw new InvalidCredentialsException();
+    }
     TokenIssuer.IssuedToken token = tokenIssuer.issue(user);
     return new AuthenticationResult(user, token.value(), token.expiresIn().toSeconds());
   }

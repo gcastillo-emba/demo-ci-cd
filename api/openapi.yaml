@@ -70,6 +70,29 @@ paths:
                 detail: El email o la contraseña no son correctos.
                 code: invalid-credentials
                 traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '429':
+          description: |
+            Demasiados intentos de inicio de sesión desde la misma IP (`code` = `too-many-requests`).
+            Lo emite el proxy nginx (5 por minuto por IP, ráfaga de 5; ADR-006), no el backend, por
+            eso `traceId` llega vacío. Incluye la cabecera `Retry-After` en segundos.
+          headers:
+            Retry-After:
+              description: Segundos que conviene esperar antes de reintentar.
+              schema:
+                type: integer
+                format: int32
+                examples: [60]
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/too-many-requests
+                title: Demasiados intentos
+                status: 429
+                detail: Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.
+                code: too-many-requests
+                traceId: ''
         '500':
           $ref: '#/components/responses/InternalError'
   /api/me:
@@ -112,7 +135,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT HS256 emitido por `login` (claims `sub`, `email`, `role`; vigencia 2 h).
+      description: JWT HS256 emitido por `login` (claims `sub`, `role`, `iat` y `exp` obligatorio; vigencia 2 h).
   responses:
     Unauthorized:
       description: Falta el token o no es válido (`code` = `unauthenticated`).

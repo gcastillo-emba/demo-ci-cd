@@ -11,6 +11,11 @@ WORKDIR /workspace/backend
 # 1) Solo wrapper + pom: la capa de dependencias se reutiliza mientras el pom no cambie.
 #    Se guarda en una capa (no en un cache mount) porque la caché `type=gha` del CI exporta
 #    capas, no cache mounts.
+#    `unzip` es necesario: sin él, mvnw descarga el .tar.gz en lugar del .zip y la verificación
+#    de `distributionSha256Sum` (calculada sobre el .zip, que también usa mvnw.cmd) falla.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends unzip \
+  && rm -rf /var/lib/apt/lists/*
 COPY backend/mvnw backend/pom.xml ./
 COPY backend/.mvn .mvn
 RUN chmod +x mvnw && ./mvnw -B -ntp dependency:go-offline

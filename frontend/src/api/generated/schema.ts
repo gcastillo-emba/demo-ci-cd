@@ -255,6 +255,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /**
+             * @description Demasiados intentos de inicio de sesión desde la misma IP (`code` = `too-many-requests`).
+             *     Lo emite el proxy nginx (5 por minuto por IP, ráfaga de 5; ADR-006), no el backend, por
+             *     eso `traceId` llega vacío. Incluye la cabecera `Retry-After` en segundos.
+             */
+            429: {
+                headers: {
+                    /** @description Segundos que conviene esperar antes de reintentar. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "https://asuntos-horas.example/problems/too-many-requests",
+                     *       "title": "Demasiados intentos",
+                     *       "status": 429,
+                     *       "detail": "Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.",
+                     *       "code": "too-many-requests",
+                     *       "traceId": ""
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             500: components["responses"]["InternalError"];
         };
     };

@@ -1,6 +1,7 @@
 package com.emba.asuntoshoras.adapters.out.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 class BCryptPasswordHasherTest {
 
@@ -33,6 +35,43 @@ class BCryptPasswordHasherTest {
     assertThat(hasher.matches(null, hash)).isFalse();
     assertThat(hasher.matches(DEMO_PASSWORD, null)).isFalse();
     assertThat(hasher.matches(DEMO_PASSWORD, " ")).isFalse();
+  }
+
+  @Test
+  void passwordLongerThan72BytesNeverMatchesAndNeverThrows() throws IOException {
+    String hash = seedHashes().get(0);
+    String longPassword = "A".repeat(100);
+
+    assertThat(hasher.matches(longPassword, hash)).isFalse();
+    assertThat(hasher.matches("ñ".repeat(40), hash)).isFalse(); // 80 bytes en UTF-8
+  }
+
+  @Test
+  void encoderRejectionIsTreatedAsNoMatch() {
+    // Versiones de Spring Security que lanzan IllegalArgumentException con más de 72 bytes.
+    BCryptPasswordEncoder strict =
+        new BCryptPasswordEncoder() {
+          @Override
+          public boolean matches(CharSequence rawPassword, String encodedPassword) {
+            if (rawPassword.toString().getBytes(StandardCharsets.UTF_8).length > 72) {
+              throw new IllegalArgumentException("password cannot be more than 72 bytes");
+            }
+            return super.matches(rawPassword, encodedPassword);
+          }
+        };
+    BCryptPasswordHasher strictHasher = new BCryptPasswordHasher(strict);
+    String hash = strict.encode(DEMO_PASSWORD);
+
+    assertThat(strictHasher.matches("A".repeat(100), hash)).isFalse();
+    assertThat(strictHasher.matches(DEMO_PASSWORD, hash)).isTrue();
+    assertThatNoException().isThrownBy(() -> strictHasher.dummyCheck("A".repeat(100)));
+  }
+
+  @Test
+  void dummyCheckNeverThrows() {
+    assertThatNoException().isThrownBy(() -> hasher.dummyCheck(DEMO_PASSWORD));
+    assertThatNoException().isThrownBy(() -> hasher.dummyCheck("A".repeat(100)));
+    assertThatNoException().isThrownBy(() -> hasher.dummyCheck(null));
   }
 
   private static List<String> seedHashes() throws IOException {

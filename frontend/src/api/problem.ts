@@ -7,6 +7,9 @@ export const GENERIC_ERROR_DETAIL =
   'Ocurrió un error inesperado. Inténtalo de nuevo en unos minutos.';
 export const NETWORK_ERROR_DETAIL =
   'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
+/** Respaldo del 429 de nginx (rate limiting del login) si el cuerpo no llega como problem+json. */
+export const TOO_MANY_REQUESTS_DETAIL =
+  'Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.';
 
 /** Error de la API construido a partir de una respuesta `application/problem+json` (RFC 9457). */
 export class ApiProblem extends Error {
@@ -62,11 +65,14 @@ function parseFieldErrors(value: unknown): FieldError[] {
 /** Convierte un cuerpo arbitrario en `ApiProblem`, con textos de respaldo en español. */
 export function toApiProblem(status: number, body: unknown): ApiProblem {
   const b = isRecord(body) ? body : {};
+  const tooMany = status === 429;
   return new ApiProblem({
     status: typeof b.status === 'number' ? b.status : status,
-    code: asString(b.code) ?? (status >= 500 ? 'internal-error' : 'unknown-error'),
-    title: asString(b.title) ?? 'Error',
-    detail: asString(b.detail) ?? GENERIC_ERROR_DETAIL,
+    code:
+      asString(b.code) ??
+      (tooMany ? 'too-many-requests' : status >= 500 ? 'internal-error' : 'unknown-error'),
+    title: asString(b.title) ?? (tooMany ? 'Demasiados intentos' : 'Error'),
+    detail: asString(b.detail) ?? (tooMany ? TOO_MANY_REQUESTS_DETAIL : GENERIC_ERROR_DETAIL),
     errors: parseFieldErrors(b.errors),
     traceId: asString(b.traceId),
   });

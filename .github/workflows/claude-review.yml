@@ -2,6 +2,14 @@
 #   - variable de repo CLAUDE_REVIEW_ENABLED = 'true'
 #   - secreto ANTHROPIC_API_KEY (hoy no provisto: bitácora #2)
 # No es un check requerido: el gate de juicio formal es el agente `revisor` (revisor:aprobado).
+#
+# Endurecimiento (revisión de seguridad del PR #5):
+#   - Solo corre para autores OWNER, MEMBER o COLLABORATOR (no para PRs de terceros).
+#   - El prompt se lee de la rama BASE (git show origin/<base>:...), nunca del head del PR, para
+#     que un PR no pueda reescribir las instrucciones del revisor.
+#   - ANTHROPIC_API_KEY solo llega al paso de la acción; ningún paso `run` recibe el secreto
+#     (el guard evalúa solo si existe, como booleano de la expresión).
+#   - Acciones fijadas por SHA.
 name: Claude review
 
 on:
@@ -18,7 +26,10 @@ concurrency:
 jobs:
   review:
     name: claude-review
-    if: vars.CLAUDE_REVIEW_ENABLED == 'true' && github.event.pull_request.draft == false
+    if: >-
+      vars.CLAUDE_REVIEW_ENABLED == 'true' &&
+      github.event.pull_request.draft == false &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -29,9 +40,10 @@ jobs:
       - name: Guard del secreto
         id: guard
         env:
-          K: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Solo el booleano "existe el secreto", nunca su valor.
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
-          if [ -n "$K" ]; then
+          if [ "$HAS_KEY" = "true" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
@@ -44,21 +56,23 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Cargar el prompt del revisor
+      - name: Cargar el prompt del revisor (desde la rama base)
         id: prompt
         if: steps.guard.outputs.ok == 'true'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          prompt="$(git show "origin/${BASE_REF}:.github/prompts/revisor.md")"
           delim="PROMPT_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
           {
             echo "text<<$delim"
-            cat .github/prompts/revisor.md
+            printf '%s\n' "$prompt"
             echo
             echo "Repositorio: $GITHUB_REPOSITORY. PR: #$PR_NUMBER."
             echo "Publica el resultado como un único comentario en el PR con gh pr comment."
             echo "$delim"
           } >> "$GITHUB_OUTPUT"
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Revisión con Claude
         if: steps.guard.outputs.ok == 'true'

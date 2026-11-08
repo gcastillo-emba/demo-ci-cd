@@ -100,7 +100,7 @@ Todo agente termina su trabajo con este bloque:
 - **Nunca** bajar la cobertura.
 - **Solo datos sintéticos.**
 - **Nunca** `git push --force`, push a `main`, push de tags ni `gh pr merge` fuera de `scripts/merge-si-verde.mjs`.
-- Commits y títulos de PR en **Conventional Commits** con scopes `c1|c2|c3|c4|api|spec|ci|docs|deps`.
+- Commits y títulos de PR en **Conventional Commits** con scopes `c1|c2|c3|c4|api|spec|ci|docs|deps|skeleton|release` (los mismos que valida `.github/workflows/pr-title.yml`).
 - **Un PR por cambio OpenSpec** (excepción documentada: F2 agrupa las 4 propuestas).
 - No editar archivos generados (`frontend/src/api/generated/**`, `.claude/skills/openspec-*`, `.claude/commands/opsx/*`).
 - Todo spawn desde scripts Node pasa por `scripts/lib/run.mjs`.

@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
@@ -39,6 +40,8 @@ jobs:
         language: [javascript-typescript]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
@@ -55,6 +58,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

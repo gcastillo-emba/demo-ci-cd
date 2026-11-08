@@ -31,6 +31,18 @@ const GIT_GLOBAL_WITH_VALUE = new Set([
   '--exec-path',
 ]);
 
+/**
+ * Un refspec es de tag solo si algún lado es `refs/tags/...` o parece una versión (`v1.2...`).
+ * Así una rama como `v2-feature` no se confunde con un tag.
+ */
+export function isTagRefspec(r) {
+  if (r.includes('refs/tags/')) return true;
+  return r
+    .replace(/^\+/, '')
+    .split(':')
+    .some((p) => /^v\d+\.\d+/.test(p));
+}
+
 function stripRefsHeads(ref) {
   return ref.replace(/^refs\/heads\//, '');
 }
@@ -95,8 +107,7 @@ function checkGitPush(tokens, cwd) {
   const refspecs = positional.slice(1); // positional[0] = remoto
   for (const r of refspecs) {
     if (r.startsWith('+')) return MSG_FORCE;
-    if (r.includes('refs/tags/') || /^v\d/.test(r) || /:v\d/.test(r) || /:refs\/tags\//.test(r))
-      return MSG_TAG;
+    if (isTagRefspec(r)) return MSG_TAG;
   }
   for (const r of refspecs) {
     const dst = stripRefsHeads(r.includes(':') ? r.slice(r.lastIndexOf(':') + 1) : r);
@@ -115,19 +126,62 @@ function checkGitPush(tokens, cwd) {
   return null;
 }
 
-/** Analiza `gh pr merge ...`. */
+// Flags de gh que consumen el token siguiente como valor.
+const GH_OPTS_WITH_VALUE = new Set(['-R', '--repo', '--hostname']);
+// Subcomandos de `gh pr`: el primero que aparezca tras `pr` es el subcomando real.
+const GH_PR_SUBCOMMANDS = new Set([
+  'checkout',
+  'checks',
+  'close',
+  'comment',
+  'create',
+  'diff',
+  'edit',
+  'list',
+  'lock',
+  'merge',
+  'ready',
+  'reopen',
+  'review',
+  'revert',
+  'status',
+  'unlock',
+  'update-branch',
+  'view',
+]);
+
+/** Tokens posicionales de una invocación de gh (sin flags ni sus valores conocidos). */
+function ghPositionals(args) {
+  const out = [];
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (GH_OPTS_WITH_VALUE.has(a)) {
+      k++;
+      continue;
+    }
+    if (a.startsWith('-')) continue;
+    out.push(a);
+  }
+  return out;
+}
+
+/** Analiza `gh ... pr ... merge ...` (con flags intercalados) y `gh api` de merge. */
 function checkGhMerge(tokens) {
   const gi = tokens.findIndex((t) => /(^|[\\/])gh(\.exe)?$/i.test(t));
   if (gi < 0) return null;
+  const args = tokens.slice(gi + 1);
+  const pos = ghPositionals(args);
   // gh api .../pulls/N/merge (REST) o mutaciones GraphQL de merge: mismo bypass.
-  if (tokens[gi + 1] === 'api') {
-    const rest = tokens.slice(gi + 2).join(' ');
+  if (pos[0] === 'api') {
+    const rest = args.join(' ');
     if (/\/pulls\/[^\s/]+\/merge\b|mergePullRequest|enablePullRequestAutoMerge/i.test(rest))
       return MSG_MERGE;
     return null;
   }
-  if (tokens[gi + 1] !== 'pr' || tokens[gi + 2] !== 'merge') return null;
-  if (tokens.slice(gi + 3).includes('--admin')) return MSG_ADMIN;
+  if (pos[0] !== 'pr') return null;
+  const sub = pos.slice(1).find((t) => GH_PR_SUBCOMMANDS.has(t));
+  if (sub !== 'merge') return null;
+  if (args.includes('--admin')) return MSG_ADMIN;
   // El script invoca gh como proceso hijo (no pasa por el hook): cualquier `gh pr merge`
   // directo del agente, aun con --match-head-commit, se salta la verificación de etiquetas.
   return MSG_MERGE;

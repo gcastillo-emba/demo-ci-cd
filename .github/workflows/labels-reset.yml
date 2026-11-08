@@ -1,0 +1,36 @@
+# Defensa en profundidad contra aprobaciones obsoletas: cada push nuevo al PR (synchronize)
+# quita las etiquetas de los gates de juicio, que deben volver a ponerse sobre el nuevo commit.
+# merge-si-verde.mjs además exige que las etiquetas sean posteriores al inicio de `ci-ok`.
+# pull_request_target: corre con el contexto de la rama base y NO hace checkout del código del PR.
+name: Labels reset
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  reset:
+    name: reset-judgment-labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Quitar revisor:aprobado y seguridad:ok
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          actuales="$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')"
+          for label in revisor:aprobado seguridad:ok; do
+            if printf '%s\n' "$actuales" | grep -qxF "$label"; then
+              gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$label"
+              echo "Etiqueta quitada: $label"
+            else
+              echo "Etiqueta ausente: $label"
+            fi
+          done

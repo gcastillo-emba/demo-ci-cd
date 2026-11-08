@@ -36,6 +36,19 @@ const BLOCKED = [
   'gh api repos/o/r/pulls/3/merge -X PUT',
   'git push origin HEAD:refs/heads/main',
   'git -C . push --force-with-lease',
+  // gh pr merge con flags intercalados entre los subcomandos.
+  'gh pr -R owner/repo merge 3',
+  'gh --repo x pr merge 3',
+  'gh pr --repo x merge',
+  'gh -R o/r pr --repo=o/r merge 3 --squash',
+  'gh pr --unknown-flag val merge 3',
+  'gh.exe pr merge 3',
+  'gh api graphql -f query="mutation { mergePullRequest(input: {}) { clientMutationId } }"',
+  'gh --repo o/r api repos/o/r/pulls/3/merge -X PUT',
+  // tags: versión o refs/tags/ en cualquier lado del refspec.
+  'git push origin v1.2.3',
+  'git push origin HEAD:v1.0',
+  'git push origin HEAD:refs/tags/x',
 ];
 for (const c of BLOCKED) {
   test(`bloquea: ${c}`, () => {
@@ -62,6 +75,13 @@ const ALLOWED = [
   'git commit -m "push a main en otra ocasión"',
   'git log --oneline | head -5',
   'gh pr view 3',
+  'git push origin v2-feature',
+  'git push -u origin v2-feature:v2-feature',
+  'git push origin version-bump',
+  'gh pr -R owner/repo view 3',
+  'gh pr create --title merge --body "merge later"',
+  'gh pr list --search merge',
+  'gh pr checks 3 --watch',
 ];
 for (const c of ALLOWED) {
   test(`permite: ${c}`, () => {

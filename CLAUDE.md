@@ -45,19 +45,19 @@ Este archivo complementa `AGENTS.md` (importado arriba) con lo específico de Cl
 | Juicio   | Etiqueta `revisor:aprobado`                                  | PR                 | Subagente `revisor`   |
 | Juicio   | Etiqueta `seguridad:ok`                                      | PR                 | Subagente `seguridad` |
 
-El merge solo ocurre con `scripts/merge-si-verde.mjs` (`/merge-si-verde <pr>`), que exige `ci-ok` en SUCCESS y ambas etiquetas puestas después del último commit.
+El merge solo ocurre con `scripts/merge-si-verde.mjs` (`/merge-si-verde <pr>`), que exige `ci-ok` en SUCCESS, ambas etiquetas puestas después del inicio de `ci-ok` del commit de cabecera (marca de tiempo de GitHub) y un comentario `VEREDICTO: APROBADO` con el SHA de cabecera; ante cualquier dato faltante rechaza (fail-closed). El workflow `labels-reset.yml` quita las etiquetas en cada push nuevo al PR.
 
 ## Capa Claude Code (`.claude/`)
 
 ### Hooks (`.claude/hooks/*.mjs`, Node puro, con tests en `.claude/hooks/test/`)
 
-| Hook               | Evento                                   | Qué hace                                                                                            |
-| ------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `guard-secrets`    | PreToolUse (Edit/Write, Bash/PowerShell) | Bloquea escribir o leer `.env*` (salvo `.env.example`), llaves privadas y credenciales.             |
-| `guard-git-push`   | PreToolUse (Bash/PowerShell)             | Bloquea `push --force`, push a `main`, push de tags y `gh pr merge` fuera del script.               |
-| `format-on-edit`   | PostToolUse (Edit/Write)                 | Prettier vía API y Spotless con `-DspotlessFiles`; ignora `generated/`.                             |
-| `bitacora-on-stop` | Stop                                     | Avisa si `.mada/fallas.jsonl` tiene fallas más nuevas que la bitácora; aplica la regla de 3 fallas. |
-| `session-context`  | SessionStart                             | Imprime `.mada/estado.json` para retomar tras compactar.                                            |
+| Hook               | Evento                                                  | Qué hace                                                                                            |
+| ------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `guard-secrets`    | PreToolUse (Read/Edit/Write/Grep/Glob, Bash/PowerShell) | Bloquea escribir o leer `.env*` (salvo `.env.example`), llaves privadas y credenciales.             |
+| `guard-git-push`   | PreToolUse (Bash/PowerShell)                            | Bloquea `push --force`, push a `main`, push de tags y `gh pr merge` fuera del script.               |
+| `format-on-edit`   | PostToolUse (Edit/Write)                                | Prettier vía API y Spotless con `-DspotlessFiles`; ignora `generated/`.                             |
+| `bitacora-on-stop` | Stop                                                    | Avisa si `.mada/fallas.jsonl` tiene fallas más nuevas que la bitácora; aplica la regla de 3 fallas. |
+| `session-context`  | SessionStart                                            | Imprime `.mada/estado.json` para retomar tras compactar.                                            |
 
 ### Subagentes (`.claude/agents/`)
 
@@ -65,8 +65,8 @@ El merge solo ocurre con `scripts/merge-si-verde.mjs` (`/merge-si-verde <pr>`), 
 
 ### Skills
 
-- `nueva-capacidad`: procedimiento MADA completo para una capacidad (C1–C4) con los comandos OpenSpec verificados.
-- `adr`: plantilla y numeración automática de ADRs.
+- `nueva-capacidad` (**se crea al cerrar C1**; aún no existe): procedimiento MADA completo para una capacidad (C1–C4) con los comandos OpenSpec verificados.
+- `adr` (**se crea al cerrar C1**; aún no existe): plantilla y numeración automática de ADRs.
 - `openspec-*` y `/opsx:*`: generados por OpenSpec, no se editan.
 
 ### Comandos (`.claude/commands/`)

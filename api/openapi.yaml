@@ -21,10 +21,21 @@ info:
 
     C1 (`add-clients-matters`): clientes y asuntos (etiquetas `clients` y `matters`).
 
+    C2 (`add-time-entries`): registros de horas, edición, aprobación y rechazo (etiqueta
+    `time-entries`).
+
+    Convenciones de listados compartidas:
+
+    - `page` (base 0, máximo 10000) y `size` (1 a 100, por defecto 20); fuera de rango o no
+      numérico responde `400 validation-error`.
+    - Los parámetros de búsqueda de texto (p. ej. `q`) admiten como máximo 200 caracteres; más
+      largos responden `400 validation-error`.
+
     Convenciones de error compartidas:
 
     - Precedencia cuando una petición incumple varias reglas: `401 unauthenticated` >
-      `403 forbidden` > `400 validation-error` > `404 not-found` > `409` (conflictos de estado).
+      `403 forbidden` > `400 validation-error` > `404 not-found` > `409` (conflictos de estado) >
+      `422` (reglas de negocio).
     - Un método no ofrecido en una ruta existente (p. ej. `PATCH /api/matters/{matterId}`)
       responde `405` con `code` = `method-not-allowed`, cualquiera sea el rol (la resolución del
       método precede a la autorización).
@@ -46,6 +57,10 @@ tags:
     description: Clientes de la firma (C1). Lectura para ambos roles; alta solo `PARTNER`.
   - name: matters
     description: Asuntos de la firma (C1). Lectura para ambos roles; alta y cierre solo `PARTNER`.
+  - name: time-entries
+    description: |
+      Registros de horas (C2). Alta y edición solo `LAWYER` (autor); aprobación y rechazo solo
+      `PARTNER`; listado para ambos roles (el abogado solo ve sus registros).
 security:
   - bearerAuth: []
 paths:
@@ -385,6 +400,305 @@ paths:
                 traceId: 4bf92f3577b34da6a3ce929d0e0e4736
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/time-entries:
+    get:
+      tags: [time-entries]
+      operationId: listTimeEntries
+      summary: Listar registros de horas
+      description: |
+        Lista paginada de registros de horas para cualquier usuario autenticado. Un `PARTNER` ve
+        los registros de todos los abogados que cumplan los filtros; un `LAWYER` ve solo los suyos
+        y su `lawyerId` se ignora (sin error). Filtros opcionales y combinables: `matterId`,
+        `lawyerId`, `status` y el rango inclusivo `from`..`to` sobre `workDate`. Orden con `sort`
+        (enum cerrado): `workDate,desc` por defecto (a igual fecha, `createdAt` descendente) o
+        `createdAt,asc` (cola de aprobaciones). Un `status` o `sort` no admitido, o `from`
+        posterior a `to`, responde `400 validation-error`. Una página más allá de la última
+        responde `200` con `items` vacío.
+      parameters:
+        - name: matterId
+          in: query
+          required: false
+          description: Filtra por asunto.
+          schema:
+            type: string
+            format: uuid
+        - name: lawyerId
+          in: query
+          required: false
+          description: Filtra por abogado. Solo aplica a `PARTNER`; para `LAWYER` se ignora.
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          description: Filtra por estado (`PENDING`, `APPROVED` o `REJECTED`); otro valor responde `400`.
+          schema:
+            $ref: '#/components/schemas/TimeEntryStatus'
+        - name: from
+          in: query
+          required: false
+          description: Fecha de trabajo mínima (inclusiva, `YYYY-MM-DD`). Posterior a `to` responde `400`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fecha de trabajo máxima (inclusiva, `YYYY-MM-DD`).
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: sort
+          in: query
+          required: false
+          description: |
+            Orden del listado. `workDate,desc` (por defecto; desempate `createdAt` descendente) o
+            `createdAt,asc`. Otro valor responde `400 validation-error` con `errors[].field` = `sort`.
+          schema:
+            $ref: '#/components/schemas/TimeEntrySort'
+      responses:
+        '200':
+          description: Página de registros de horas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntryPage'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [time-entries]
+      operationId: createTimeEntry
+      summary: Registrar horas
+      description: |
+        Registra horas del abogado autenticado en un asunto `OPEN`. Solo `LAWYER` (un `PARTNER`
+        recibe `403 forbidden`). El registro nace `PENDING`, con `lawyerId` del usuario
+        autenticado y `createdAt` del servidor; `id`, `lawyerId`, `lawyerName`, `matterCode`,
+        `status`, `rejectionReason`, `createdAt`, `editableUntil` y `version` enviados en el
+        cuerpo se ignoran. `description` se recorta antes de validar. Un `matterId` inexistente
+        responde `404 not-found`. Las reglas de negocio responden `422` (ver la respuesta).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeEntryCreate'
+            example:
+              matterId: 3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718
+              workDate: '2026-11-06'
+              hours: 1.5
+              description: Revisión de contrato de compraventa y notas.
+      responses:
+        '201':
+          description: Registro creado en estado `PENDING`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/TimeEntryRuleViolation'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/time-entries/{id}:
+    parameters:
+      - $ref: '#/components/parameters/TimeEntryIdPath'
+    put:
+      tags: [time-entries]
+      operationId: updateTimeEntry
+      summary: Editar registro de horas
+      description: |
+        Edita `matterId`, `workDate`, `hours` y `description` de un registro propio enviando la
+        `version` vigente. Solo `LAWYER` (un `PARTNER` recibe `403 forbidden`) y solo el autor
+        (`403 not-entry-owner`). Solo registros `PENDING` (`409 entry-not-pending`) y dentro de la
+        ventana de edición (`422 edit-window-expired`: hoy en `America/La_Paz` ≤ `editableUntil`).
+        Una `version` obsoleta responde `409 concurrent-modification` sin aplicar cambios. Aplica
+        las mismas reglas que el alta; `matter-closed` se evalúa sobre el asunto destino y, para
+        el límite diario, las horas previas del propio registro no cuentan. Autor, estado, motivo
+        de rechazo y `createdAt` nunca cambian; los campos de solo lectura enviados se ignoran.
+        Responde `200` con el registro y una `version` nueva.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeEntryUpdate'
+            example:
+              matterId: 3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718
+              workDate: '2026-11-06'
+              hours: 3.5
+              description: Revisión de contrato y reunión con el cliente.
+              version: 0
+      responses:
+        '200':
+          description: Registro actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            El rol no permite editar (`code` = `forbidden`, p. ej. un `PARTNER`) o el registro es
+            de otro abogado (`code` = `not-entry-owner`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                forbidden:
+                  summary: Rol no permitido
+                  value:
+                    type: https://asuntos-horas.example/problems/forbidden
+                    title: Acción no permitida para su rol
+                    status: 403
+                    detail: Tu rol no permite realizar esta acción.
+                    code: forbidden
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                notEntryOwner:
+                  summary: Registro ajeno
+                  value:
+                    type: https://asuntos-horas.example/problems/not-entry-owner
+                    title: El registro no te pertenece
+                    status: 403
+                    detail: Solo el autor puede editar este registro de horas.
+                    code: not-entry-owner
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: |
+            El registro no está `PENDING` (`code` = `entry-not-pending`) o la `version` enviada no
+            es la vigente (`code` = `concurrent-modification`). No se aplica ningún cambio.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                entryNotPending:
+                  summary: Registro no pendiente
+                  value:
+                    type: https://asuntos-horas.example/problems/entry-not-pending
+                    title: El registro ya no está pendiente
+                    status: 409
+                    detail: El registro ya fue aprobado o rechazado; no se modificó.
+                    code: entry-not-pending
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                concurrentModification:
+                  summary: Versión obsoleta
+                  value:
+                    type: https://asuntos-horas.example/problems/concurrent-modification
+                    title: El registro cambió
+                    status: 409
+                    detail: El registro fue modificado por otra operación. Recarga y vuelve a intentarlo.
+                    code: concurrent-modification
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '422':
+          $ref: '#/components/responses/TimeEntryRuleViolation'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/time-entries/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/TimeEntryIdPath'
+    post:
+      tags: [time-entries]
+      operationId: approveTimeEntry
+      summary: Aprobar registro de horas
+      description: |
+        Aprueba un registro `PENDING` de cualquier abogado; queda `APPROVED` (terminal). Solo
+        `PARTNER` (un `LAWYER` recibe `403 forbidden`). Sin cuerpo y sin `version`. No evalúa
+        `matter-closed`: los pendientes de un asunto cerrado pueden aprobarse.
+      responses:
+        '200':
+          description: Registro aprobado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EntryNotPending'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/time-entries/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/TimeEntryIdPath'
+    post:
+      tags: [time-entries]
+      operationId: rejectTimeEntry
+      summary: Rechazar registro de horas
+      description: |
+        Rechaza un registro `PENDING` con un motivo; queda `REJECTED` (terminal) con su
+        `rejectionReason`. Solo `PARTNER` (un `LAWYER` recibe `403 forbidden`). Sin `version`.
+        `reason` se recorta y se valida en el servicio: ausente, en blanco o con más de 500
+        caracteres responde `422 rejection-reason-required` (no `400`). `409 entry-not-pending` se
+        evalúa antes que el motivo. No evalúa `matter-closed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRequest'
+            example:
+              reason: Descripción insuficiente
+      responses:
+        '200':
+          description: Registro rechazado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeEntry'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EntryNotPending'
+        '422':
+          description: Falta el motivo, está en blanco o supera 500 caracteres (`code` = `rejection-reason-required`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://asuntos-horas.example/problems/rejection-reason-required
+                title: Motivo de rechazo obligatorio
+                status: 422
+                detail: Indica un motivo de rechazo de 1 a 500 caracteres.
+                code: rejection-reason-required
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -397,18 +711,24 @@ components:
       name: q
       in: query
       required: false
-      description: Texto de búsqueda (coincidencia parcial, sin distinguir mayúsculas ni minúsculas).
+      description: |
+        Texto de búsqueda (coincidencia parcial, sin distinguir mayúsculas ni minúsculas). Máximo
+        200 caracteres; más largo responde `400 validation-error`.
       schema:
         type: string
+        maxLength: 200
     PageParam:
       name: page
       in: query
       required: false
-      description: Página (base 0). Negativa o no numérica responde `400 validation-error`.
+      description: |
+        Página (base 0, máximo 10000). Negativa, mayor que 10000 o no numérica responde
+        `400 validation-error`.
       schema:
         type: integer
         format: int32
         minimum: 0
+        maximum: 10000
         default: 0
     SizeParam:
       name: size
@@ -437,9 +757,19 @@ components:
       schema:
         type: string
         format: uuid
+    TimeEntryIdPath:
+      name: id
+      in: path
+      required: true
+      description: Id del registro de horas. Un valor que no es UUID responde `400 validation-error`.
+      schema:
+        type: string
+        format: uuid
   headers:
     Location:
-      description: Ruta del recurso creado (`/api/clients/{clientId}` o `/api/matters/{matterId}`).
+      description: |
+        Ruta del recurso creado (`/api/clients/{clientId}`, `/api/matters/{matterId}` o
+        `/api/time-entries/{id}`).
       schema:
         type: string
         format: uri-reference
@@ -499,6 +829,90 @@ components:
             detail: El recurso solicitado no existe.
             code: not-found
             traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+    EntryNotPending:
+      description: |
+        El registro no está `PENDING` (`code` = `entry-not-pending`): `APPROVED` y `REJECTED` son
+        terminales. No se aplica ningún cambio.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://asuntos-horas.example/problems/entry-not-pending
+            title: El registro ya no está pendiente
+            status: 409
+            detail: El registro ya fue aprobado o rechazado; no se modificó.
+            code: entry-not-pending
+            traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+    TimeEntryRuleViolation:
+      description: |
+        El registro incumple una regla de negocio. `code` es uno de (en orden de evaluación):
+        `edit-window-expired` (solo edición), `matter-closed`, `future-date` (posterior a hoy en
+        `America/La_Paz`), `hours-invalid-increment` (no múltiplo de 0,1),
+        `hours-out-of-range` (fuera de `0 < hours ≤ 24`) y `daily-hours-exceeded` (la suma
+        `PENDING` + `APPROVED` del abogado ese día superaría 24). Solo `daily-hours-exceeded`
+        agrega `limitHours` y `alreadyLoggedHours` (esquema `DailyHoursExceededProblem`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/TimeEntryRuleProblem'
+          examples:
+            dailyHoursExceeded:
+              summary: Límite diario superado
+              value:
+                type: https://asuntos-horas.example/problems/daily-hours-exceeded
+                title: Límite diario de horas superado
+                status: 422
+                detail: Ya tienes 20 h registradas ese día; puedes registrar como máximo 4 h más.
+                code: daily-hours-exceeded
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                limitHours: 24
+                alreadyLoggedHours: 20
+            futureDate:
+              summary: Fecha futura
+              value:
+                type: https://asuntos-horas.example/problems/future-date
+                title: Fecha de trabajo futura
+                status: 422
+                detail: No se pueden registrar horas en una fecha posterior a hoy.
+                code: future-date
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+            hoursInvalidIncrement:
+              summary: Incremento de horas inválido
+              value:
+                type: https://asuntos-horas.example/problems/hours-invalid-increment
+                title: Incremento de horas inválido
+                status: 422
+                detail: Las horas deben registrarse en incrementos de 0,1.
+                code: hours-invalid-increment
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+            hoursOutOfRange:
+              summary: Horas fuera de rango
+              value:
+                type: https://asuntos-horas.example/problems/hours-out-of-range
+                title: Horas fuera de rango
+                status: 422
+                detail: Las horas deben ser mayores que 0 y como máximo 24.
+                code: hours-out-of-range
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+            matterClosed:
+              summary: Asunto cerrado
+              value:
+                type: https://asuntos-horas.example/problems/matter-closed
+                title: El asunto está cerrado
+                status: 422
+                detail: No se pueden registrar ni editar horas en un asunto cerrado.
+                code: matter-closed
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+            editWindowExpired:
+              summary: Ventana de edición vencida
+              value:
+                type: https://asuntos-horas.example/problems/edit-window-expired
+                title: Ventana de edición vencida
+                status: 422
+                detail: El registro solo podía editarse hasta 7 días después de su creación.
+                code: edit-window-expired
+                traceId: 4bf92f3577b34da6a3ce929d0e0e4736
     InternalError:
       description: |
         Error inesperado del servidor (`code` = `internal-error`). El `detail` es genérico y la
@@ -762,3 +1176,195 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Matter'
+    TimeEntryStatus:
+      type: string
+      description: |
+        Estado del registro de horas. `PENDING` = Pendiente, `APPROVED` = Aprobada,
+        `REJECTED` = Rechazada. `APPROVED` y `REJECTED` son terminales.
+      enum: [PENDING, APPROVED, REJECTED]
+    TimeEntrySort:
+      type: string
+      description: |
+        Orden del listado de registros (enum cerrado). `workDate,desc` = `workDate` descendente y,
+        a igual fecha, `createdAt` descendente (por defecto). `createdAt,asc` = `createdAt`
+        ascendente (cola de aprobaciones).
+      enum: ['workDate,desc', 'createdAt,asc']
+      default: 'workDate,desc'
+    TimeEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - matterId
+        - matterCode
+        - lawyerId
+        - lawyerName
+        - workDate
+        - hours
+        - description
+        - status
+        - rejectionReason
+        - createdAt
+        - editableUntil
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        matterId:
+          type: string
+          format: uuid
+        matterCode:
+          type: string
+          description: Código del asunto (`AS-YYYY-NNNN`).
+          pattern: '^AS-\d{4}-\d{4}$'
+          examples: [AS-2026-0012]
+        lawyerId:
+          type: string
+          format: uuid
+          description: Abogado autor del registro (siempre el usuario autenticado que lo creó).
+        lawyerName:
+          type: string
+          description: Nombre completo del abogado autor.
+        workDate:
+          type: string
+          format: date
+          description: Fecha de trabajo (no posterior a hoy en `America/La_Paz`).
+        hours:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 24
+          description: Horas en incrementos de 0,1 (se almacenan como décimas enteras 1..240).
+          examples: [1.5]
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        status:
+          $ref: '#/components/schemas/TimeEntryStatus'
+        rejectionReason:
+          type: [string, 'null']
+          maxLength: 500
+          description: Motivo de rechazo; `null` salvo cuando `status` = `REJECTED`.
+        createdAt:
+          type: string
+          format: date-time
+          description: Instante de creación fijado por el servidor.
+        editableUntil:
+          type: string
+          format: date
+          description: |
+            Última fecha (en `America/La_Paz`) en que el autor puede editar el registro: fecha de
+            creación en La Paz + 7 días. Se informa siempre, aunque el registro ya no sea
+            `PENDING`; el servidor sigue siendo la autoridad.
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Versión para concurrencia optimista; se envía en `TimeEntryUpdate`.
+    TimeEntryCreate:
+      type: object
+      description: |
+        Alta de registro de horas. `description` se recorta antes de validar; vacía tras recortar
+        o con más de 2000 caracteres responde `400 validation-error`. `hours` es un número decimal
+        (p. ej. `1.5`) sin restricciones de formato en el contrato: el incremento de 0,1 y el
+        rango `0 < hours ≤ 24` son reglas de negocio que responden `422`
+        (`hours-invalid-increment`, `hours-out-of-range`). Los campos controlados por el servidor
+        (`id`, `lawyerId`, `lawyerName`, `matterCode`, `status`, `rejectionReason`, `createdAt`,
+        `editableUntil`, `version`) no forman parte del esquema y se ignoran si se envían.
+      required: [matterId, workDate, hours, description]
+      properties:
+        matterId:
+          type: string
+          format: uuid
+        workDate:
+          type: string
+          format: date
+          examples: ['2026-11-06']
+        hours:
+          type: number
+          examples: [1.5]
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: '^[\s\S]*\S[\s\S]*$'
+          examples: [Revisión de contrato de compraventa y notas.]
+    TimeEntryUpdate:
+      type: object
+      description: |
+        Edición de registro de horas: mismas reglas que `TimeEntryCreate` más `version`
+        obligatoria (ausente → `400 validation-error` con `errors[].field` = `version`; obsoleta →
+        `409 concurrent-modification`). Autor, estado, motivo de rechazo y `createdAt` no forman
+        parte del esquema y se ignoran si se envían.
+      required: [matterId, workDate, hours, description, version]
+      properties:
+        matterId:
+          type: string
+          format: uuid
+        workDate:
+          type: string
+          format: date
+          examples: ['2026-11-06']
+        hours:
+          type: number
+          examples: [3.5]
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: '^[\s\S]*\S[\s\S]*$'
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Versión vigente del registro (la devuelta por el servidor).
+    RejectRequest:
+      type: object
+      description: |
+        Rechazo de un registro. `reason` se recorta y se valida en el servicio (no en el
+        contrato): ausente, en blanco o con más de 500 caracteres responde
+        `422 rejection-reason-required`. Un cuerpo ausente o que no es JSON responde
+        `400 validation-error`.
+      properties:
+        reason:
+          type: string
+          description: Motivo del rechazo (1 a 500 caracteres tras recortar).
+          examples: [Descripción insuficiente]
+    TimeEntryPage:
+      description: Página de registros de horas.
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimeEntry'
+    DailyHoursExceededProblem:
+      description: |
+        Problem Details de `daily-hours-exceeded` (RFC 9457 con miembros de extensión).
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [limitHours, alreadyLoggedHours]
+          properties:
+            limitHours:
+              type: number
+              description: Límite diario de horas por abogado (24).
+              examples: [24]
+            alreadyLoggedHours:
+              type: number
+              minimum: 0
+              description: |
+                Horas `PENDING` + `APPROVED` del abogado ese día sin el registro nuevo (o sin las
+                horas previas del registro editado).
+              examples: [20]
+    TimeEntryRuleProblem:
+      description: |
+        Problem Details de una regla de negocio de registros de horas (`422`): un `Problem` y, si
+        `code` = `daily-hours-exceeded`, además `limitHours` y `alreadyLoggedHours`.
+      anyOf:
+        - $ref: '#/components/schemas/DailyHoursExceededProblem'
+        - $ref: '#/components/schemas/Problem'

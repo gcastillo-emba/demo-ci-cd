@@ -1,9 +1,9 @@
 ## 1. Contrato
 
-- [ ] 1.1 Agregar a `api/openapi.yaml` los endpoints `GET`/`POST /api/time-entries`, `PUT /api/time-entries/{id}`, `POST /api/time-entries/{id}/approve` y `POST /api/time-entries/{id}/reject` con sus respuestas 200/201/400/401/403/404/409/422 en `application/problem+json`; verificar con `npm run api:lint` en verde
-- [ ] 1.2 Definir los esquemas `TimeEntry`, `TimeEntryCreate`, `TimeEntryUpdate` (con `version`), `RejectRequest`, `TimeEntryPage` y `DailyHoursExceededProblem` (`limitHours`, `alreadyLoggedHours`); verificar con `npm run api:lint` y revisión de que los nombres coinciden con `docs/glosario.md`
-- [ ] 1.3 Documentar en el contrato los parámetros `matterId`, `lawyerId`, `status`, `from`, `to`, `page`, `size` (máx. 100) y `sort` (enum cerrado `workDate,desc` por defecto | `createdAt,asc`), más el campo `editableUntil` en `TimeEntry`; verificar con `npm run api:lint`
-- [ ] 1.4 Regenerar el cliente con `npm run api:generate` y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde
+- [x] 1.1 Agregar a `api/openapi.yaml` los endpoints `GET`/`POST /api/time-entries`, `PUT /api/time-entries/{id}`, `POST /api/time-entries/{id}/approve` y `POST /api/time-entries/{id}/reject` con sus respuestas 200/201/400/401/403/404/409/422 en `application/problem+json`; verificar con `npm run api:lint` en verde
+- [x] 1.2 Definir los esquemas `TimeEntry`, `TimeEntryCreate`, `TimeEntryUpdate` (con `version`), `RejectRequest`, `TimeEntryPage` y `DailyHoursExceededProblem` (`limitHours`, `alreadyLoggedHours`); verificar con `npm run api:lint` y revisión de que los nombres coinciden con `docs/glosario.md`
+- [x] 1.3 Documentar en el contrato los parámetros `matterId`, `lawyerId`, `status`, `from`, `to`, `page`, `size` (máx. 100) y `sort` (enum cerrado `workDate,desc` por defecto | `createdAt,asc`), más el campo `editableUntil` en `TimeEntry`; verificar con `npm run api:lint`
+- [x] 1.4 Regenerar el cliente con `npm run api:generate` y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde
 
 ## 2. Backend
 

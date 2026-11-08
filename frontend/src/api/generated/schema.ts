@@ -308,6 +308,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumen del tablero de horas
+         * @description Resumen agregado de horas `APPROVED` y `PENDING` (los registros `REJECTED` no cuentan) por
+         *     asunto y por abogado, más los totales del período, para cualquier usuario autenticado
+         *     (no hay `403`). Un `PARTNER` ve los registros de todos los abogados; un `LAWYER` solo los
+         *     suyos y `byLawyer` contiene siempre exactamente su propia fila (con ceros si no tiene horas
+         *     en la ventana). La ventana filtra por `workDate` (inclusiva en ambos extremos):
+         *
+         *     - Sin `from` ni `to`: últimos 30 días, `[hoy-29, hoy]`, con "hoy" en `America/La_Paz`.
+         *     - Con `from` y `to`: `[from, to]`, como máximo 92 días contando ambos extremos.
+         *
+         *     La respuesta devuelve la ventana efectiva en `from` y `to`. Solo aparecen filas con horas
+         *     contadas (salvo la fila propia del `LAWYER`); `byMatter` se ordena por `matterCode` y
+         *     `byLawyer` por `lawyerName`, ambos ascendentes. Un período sin horas responde `200` con
+         *     listas vacías y totales en cero (nunca `404`). No se pagina. Los parámetros de consulta
+         *     desconocidos (p. ej. `lawyerId`) se ignoran.
+         *
+         *     Responden `400 validation-error` (sin datos agregados), con `errors[].field`: un solo
+         *     parámetro de la ventana (el ausente), `from` posterior a `to` (`from`), un rango de más de
+         *     92 días (`to`) y una fecha que no es ISO `YYYY-MM-DD` válida o no existe (el parámetro
+         *     afectado).
+         */
+        get: operations["getDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -604,6 +642,97 @@ export interface components {
          *     `code` = `daily-hours-exceeded`, además `limitHours` y `alreadyLoggedHours`.
          */
         TimeEntryRuleProblem: components["schemas"]["DailyHoursExceededProblem"] | components["schemas"]["Problem"];
+        /**
+         * @description Totales del período dentro del alcance del usuario. Cada valor es igual a la suma de la
+         *     columna correspondiente en `byMatter` y en `byLawyer`.
+         */
+        HoursTotals: {
+            /**
+             * @description Suma de horas `APPROVED` (decimal con una décima).
+             * @example 9.5
+             */
+            approvedHours: number;
+            /**
+             * @description Suma de horas `PENDING` (decimal con una décima).
+             * @example 4.5
+             */
+            pendingHours: number;
+        };
+        /** @description Horas contadas de un asunto en la ventana. */
+        MatterHoursRow: {
+            /** Format: uuid */
+            matterId: string;
+            /**
+             * @description Código del asunto (`AS-YYYY-NNNN`).
+             * @example AS-2026-0001
+             */
+            matterCode: string;
+            /**
+             * @description Título del asunto.
+             * @example Constitución de sociedad comercial
+             */
+            matterTitle: string;
+            /**
+             * @description Suma de horas `APPROVED` del asunto (decimal con una décima).
+             * @example 3.5
+             */
+            approvedHours: number;
+            /**
+             * @description Suma de horas `PENDING` del asunto (decimal con una décima).
+             * @example 0.5
+             */
+            pendingHours: number;
+        };
+        /**
+         * @description Horas contadas de un abogado en la ventana. Para un `LAWYER` es siempre su propia fila,
+         *     con ceros si no tiene horas contadas.
+         */
+        LawyerHoursRow: {
+            /** Format: uuid */
+            lawyerId: string;
+            /**
+             * @description Nombre completo del abogado.
+             * @example Ana Pérez
+             */
+            lawyerName: string;
+            /**
+             * @description Suma de horas `APPROVED` del abogado (decimal con una décima).
+             * @example 6
+             */
+            approvedHours: number;
+            /**
+             * @description Suma de horas `PENDING` del abogado (decimal con una décima).
+             * @example 2
+             */
+            pendingHours: number;
+        };
+        /**
+         * @description Resumen del tablero para la ventana efectiva `[from, to]` (inclusiva). `byMatter` ordenado
+         *     por `matterCode` ascendente y `byLawyer` por `lawyerName` ascendente; solo filas con horas
+         *     contadas, salvo la fila propia del `LAWYER`.
+         */
+        DashboardSummary: {
+            /**
+             * Format: date
+             * @description Primer día de la ventana efectiva (inclusivo).
+             * @example 2026-10-09
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description Último día de la ventana efectiva (inclusivo).
+             * @example 2026-11-07
+             */
+            to: string;
+            totals: components["schemas"]["HoursTotals"];
+            /** @description Una fila por asunto con horas contadas; vacía si no hay horas. */
+            byMatter: components["schemas"]["MatterHoursRow"][];
+            /**
+             * @description Una fila por abogado con horas contadas (`PARTNER`; vacía si no hay horas) o exactamente
+             *     la fila propia (`LAWYER`).
+             */
+            byLawyer: components["schemas"]["LawyerHoursRow"][];
+        };
     };
     responses: {
         /** @description Falta el token o no es válido (`code` = `unauthenticated`). */
@@ -1401,6 +1530,94 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getDashboardSummary: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Primer día de la ventana (inclusivo, `YYYY-MM-DD`). Debe enviarse junto con `to`; no
+                 *     puede ser posterior a `to`.
+                 * @example 2026-10-09
+                 */
+                from?: string;
+                /**
+                 * @description Último día de la ventana (inclusivo, `YYYY-MM-DD`). Debe enviarse junto con `from`; el
+                 *     rango `from`..`to` admite como máximo 92 días contando ambos extremos.
+                 * @example 2026-11-07
+                 */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen agregado de la ventana efectiva. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "from": "2026-10-09",
+                     *       "to": "2026-11-07",
+                     *       "totals": {
+                     *         "approvedHours": 9.5,
+                     *         "pendingHours": 4.5
+                     *       },
+                     *       "byMatter": [
+                     *         {
+                     *           "matterId": "3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718",
+                     *           "matterCode": "AS-2026-0001",
+                     *           "matterTitle": "Constitución de sociedad comercial",
+                     *           "approvedHours": 9.5,
+                     *           "pendingHours": 0.5
+                     *         },
+                     *         {
+                     *           "matterId": "7d2b4c6e-1a3f-4b5d-9e8f-0a1b2c3d4e5f",
+                     *           "matterCode": "AS-2026-0002",
+                     *           "matterTitle": "Revisión de contrato de arrendamiento",
+                     *           "approvedHours": 0,
+                     *           "pendingHours": 4
+                     *         }
+                     *       ],
+                     *       "byLawyer": [
+                     *         {
+                     *           "lawyerId": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b",
+                     *           "lawyerName": "Ana Pérez",
+                     *           "approvedHours": 6,
+                     *           "pendingHours": 2
+                     *         },
+                     *         {
+                     *           "lawyerId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+                     *           "lawyerName": "Bruno Rojas",
+                     *           "approvedHours": 3.5,
+                     *           "pendingHours": 2.5
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DashboardSummary"];
+                };
+            };
+            /**
+             * @description La ventana no es válida (`code` = `validation-error`): solo uno de `from`/`to`, `from`
+             *     posterior a `to`, rango de más de 92 días o fecha con formato inválido o inexistente.
+             *     `errors[]` indica el parámetro afectado. No incluye datos agregados.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalError"];
         };
     };

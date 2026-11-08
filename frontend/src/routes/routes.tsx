@@ -4,6 +4,7 @@ import { RequireAuth } from '../auth/RequireAuth';
 import { RequireRole } from '../auth/RequireRole';
 import { ApprovalsPage } from './ApprovalsPage';
 import { ClientsPage } from './ClientsPage';
+import { DashboardPage } from './DashboardPage';
 import { HomePage } from './HomePage';
 import { LoginPage } from './LoginPage';
 import { MatterDetailPage } from './MatterDetailPage';
@@ -77,6 +78,15 @@ export const routes: RouteObject[] = [
         <RequireRole roles={PARTNER_ONLY}>
           <ApprovalsPage />
         </RequireRole>
+      </RequireAuth>
+    ),
+  },
+  // C3 — Tablero para ambos roles; el alcance por rol lo aplica el servidor (design D3).
+  {
+    path: '/tablero',
+    element: (
+      <RequireAuth>
+        <DashboardPage />
       </RequireAuth>
     ),
   },

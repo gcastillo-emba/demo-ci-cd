@@ -5,11 +5,13 @@ import com.emba.asuntoshoras.adapters.out.security.JwtTokenIssuer;
 import com.emba.asuntoshoras.application.port.in.AuthenticateUseCase;
 import com.emba.asuntoshoras.application.port.in.ClientUseCases;
 import com.emba.asuntoshoras.application.port.in.GetCurrentUserQuery;
+import com.emba.asuntoshoras.application.port.in.GetDashboardSummary;
 import com.emba.asuntoshoras.application.port.in.GetFeaturesQuery;
 import com.emba.asuntoshoras.application.port.in.MatterUseCases;
 import com.emba.asuntoshoras.application.port.in.TimeEntryUseCases;
 import com.emba.asuntoshoras.application.port.out.ClientRepository;
 import com.emba.asuntoshoras.application.port.out.DailyHoursLock;
+import com.emba.asuntoshoras.application.port.out.DashboardReadRepository;
 import com.emba.asuntoshoras.application.port.out.FeatureFlags;
 import com.emba.asuntoshoras.application.port.out.MatterCodeSequence;
 import com.emba.asuntoshoras.application.port.out.MatterRepository;
@@ -20,6 +22,7 @@ import com.emba.asuntoshoras.application.port.out.UserRepository;
 import com.emba.asuntoshoras.application.service.AuthenticationService;
 import com.emba.asuntoshoras.application.service.ClientService;
 import com.emba.asuntoshoras.application.service.CurrentUserService;
+import com.emba.asuntoshoras.application.service.DashboardQueryService;
 import com.emba.asuntoshoras.application.service.FeaturesService;
 import com.emba.asuntoshoras.application.service.MatterService;
 import com.emba.asuntoshoras.application.service.TimeEntryService;
@@ -84,5 +87,11 @@ public class BeanConfig {
       DailyHoursLock dailyHoursLock,
       Clock clock) {
     return new TimeEntryService(entries, matters, dailyHoursLock, clock);
+  }
+
+  @Bean
+  GetDashboardSummary getDashboardSummary(
+      DashboardReadRepository dashboard, UserRepository users, Clock clock) {
+    return new DashboardQueryService(dashboard, users, clock);
   }
 }

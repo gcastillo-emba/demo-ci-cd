@@ -3,6 +3,7 @@ package com.emba.asuntoshoras.adapters.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.DomainValidationException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.emba.asuntoshoras.domain.shared.NotFoundException;
 import com.emba.asuntoshoras.domain.timeentry.ConcurrentModificationException;
@@ -86,6 +87,18 @@ class ProblemCatalogTest {
 
     assertThat(catalog.find(Orphan.class)).isEmpty();
     assertThat(catalog.find(String.class)).isEmpty();
+  }
+
+  /** add-hours-dashboard tarea 2.2: la validación de la ventana es 400 validation-error. */
+  @Test
+  void mapsDateWindowValidationTo400() {
+    DomainException exception =
+        new DomainValidationException(
+            List.of(new DomainValidationException.Violation("to", "Mensaje fijo.")));
+    assertThat(exception.code()).isEqualTo("validation-error");
+    assertThat(catalog.isMapped(DomainValidationException.class)).isTrue();
+    assertThat(catalog.find(exception.getClass()))
+        .hasValueSatisfying(e -> assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST));
   }
 
   /** Tarea 2.3: los 10 slugs nuevos de C2 (design D6) y su estado HTTP. */

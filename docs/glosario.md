@@ -36,6 +36,7 @@ Lenguaje ubicuo del POC. Regla: **documentación y UI en español; código, iden
 | Ventana de fechas   | `DateWindow` (`from`/`to`)  | Rango inclusivo de `workDate`; por defecto `[hoy-29, hoy]` en `America/La_Paz`, máximo 92 días.                                                              |
 | Horas aprobadas     | `approvedHours`             | Suma de horas `APPROVED` en la ventana.                                                                                                                      |
 | Horas pendientes    | `pendingHours`              | Suma de horas `PENDING` en la ventana. `REJECTED` nunca suma.                                                                                                |
+| Fila propia         | `byLawyer` (rol `LAWYER`)   | Para un abogado, `byLawyer` tiene siempre exactamente una fila, la suya; si no tiene horas contadas en la ventana va con 0.0/0.0 (design Supuesto 1).        |
 
 ## Personas y seguridad
 

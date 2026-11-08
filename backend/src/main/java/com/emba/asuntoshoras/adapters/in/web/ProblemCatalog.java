@@ -5,6 +5,7 @@ import com.emba.asuntoshoras.domain.client.ClientTaxIdTakenException;
 import com.emba.asuntoshoras.domain.matter.MatterAlreadyClosedException;
 import com.emba.asuntoshoras.domain.matter.MatterNotFoundException;
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.DomainValidationException;
 import com.emba.asuntoshoras.domain.shared.ForbiddenException;
 import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.emba.asuntoshoras.domain.timeentry.ConcurrentModificationException;
@@ -93,7 +94,11 @@ public class ProblemCatalog {
               new Entry(HttpStatus.FORBIDDEN, "El registro no te pertenece")),
           Map.entry(
               RejectionReasonRequiredException.class,
-              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Motivo de rechazo obligatorio")));
+              new Entry(HttpStatus.UNPROCESSABLE_ENTITY, "Motivo de rechazo obligatorio")),
+          // add-hours-dashboard (design D2): validación de la ventana con errors[] por campo.
+          Map.entry(
+              DomainValidationException.class,
+              new Entry(HttpStatus.BAD_REQUEST, "Solicitud inválida")));
 
   /** Entrada exacta o, en su defecto, la de la superclase más cercana. */
   public Optional<Entry> find(Class<?> exceptionType) {

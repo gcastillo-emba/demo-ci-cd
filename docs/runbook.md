@@ -229,8 +229,8 @@ Guion sugerido para mostrar cada capacidad en la demo. Las secciones marcadas **
 | Capacidad                       | Cambio OpenSpec             | Estado en `latest` |
 | ------------------------------- | --------------------------- | ------------------ |
 | C1 — Clientes y asuntos         | `add-clients-matters`       | Disponible         |
-| C2 — Registro de horas          | `add-time-entries`          | En construcción    |
-| C3 — Tablero de horas           | `add-hours-dashboard`       | Pendiente          |
+| C2 — Registro de horas          | `add-time-entries`          | Disponible         |
+| C3 — Tablero de horas           | `add-hours-dashboard`       | Disponible         |
 | C4 — Asistente de descripciones | `add-description-assistant` | Pendiente          |
 
 ### C1 — Clientes y asuntos
@@ -239,13 +239,19 @@ Guion sugerido para mostrar cada capacidad en la demo. Las secciones marcadas **
 2. Ingresar como `abogado1@asuntos.test` (ABOGADO): listar y consultar clientes y asuntos; las altas y el cierre de asuntos son exclusivos del SOCIO (la API responde `403`).
 3. Evidencia de referencia: `docs/evidence/add-clients-matters/`.
 
-### C2 — Registro de horas (pendiente)
+### C2 — Registro de horas
 
-_Se completa al fusionar `feat(c2)`: registrar horas como ABOGADO, límite diario de 24 h, ventana de edición de 7 días, aprobar y rechazar con motivo como SOCIO._
+1. Como `abogado1@asuntos.test` (ABOGADO), abrir **Registrar horas**: elegir un asunto abierto, una fecha no futura, las horas en incrementos de 0,1 (se acepta coma decimal) y la descripción. El registro queda PENDIENTE.
+2. Superar las 24 h del día muestra el error `daily-hours-exceeded`, con el límite y las horas ya cargadas. Una fecha futura o un asunto cerrado devuelven `422` con un mensaje claro.
+3. En **Mis registros** se editan los registros propios PENDIENTES durante los 7 días siguientes a su creación.
+4. Como `socia@asuntos.test` (SOCIO), en **Aprobaciones**: aprobar uno y rechazar otro con motivo obligatorio. El abogado ve los estados nuevos.
+5. Evidencia de referencia: `docs/evidence/add-time-entries/`.
 
-### C3 — Tablero de horas (pendiente)
+### C3 — Tablero de horas
 
-_Se completa al fusionar `feat(c3)`: tablero de los últimos 30 días con alcance por rol._
+1. Como SOCIO, abrir **Tablero**: muestra las horas por asunto y por abogado de los últimos 30 días, separadas en aprobadas y pendientes (las rechazadas se excluyen).
+2. Como ABOGADO, el mismo tablero muestra solo sus horas: una fila propia, con ceros si no cargó horas en el período.
+3. Evidencia de referencia: `docs/evidence/add-hours-dashboard/`.
 
 ### C4 — Asistente de descripciones (pendiente)
 

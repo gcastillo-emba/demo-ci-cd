@@ -80,7 +80,7 @@ El adaptador de persistencia ejecuta dos consultas nativas (o JPQL con proyeccio
 
 ## Migration Plan
 
-Sin migraciones de esquema obligatorias. Despliegue con la imagen normal de CD; rollback = revertir el PR (el endpoint es de solo lectura y no altera datos).
+Sin cambios de tablas. La tarea 2.7 encontró un escaneo completo de `time_entries` en la consulta del socio, por lo que se agregó la migración aditiva `V4__dashboard_indexes.sql` con el índice `ix_time_entries_work_date_status (work_date, status)` (Supuesto 19); las consultas del abogado usan el índice existente `ix_time_entries_lawyer_work_date`. Despliegue con la imagen normal de CD; rollback = revertir el PR (el endpoint es de solo lectura y no altera datos).
 
 ## Supuestos
 
@@ -97,3 +97,20 @@ Sin migraciones de esquema obligatorias. Despliegue con la imagen normal de CD; 
 11. **Sin paginación ni 403:** ambos roles pueden consultar el tablero (no hay caso `403 forbidden`); el resumen no se pagina.
 12. **Parámetros desconocidos se ignoran** (no producen `400`).
 13. **Nombre del abogado:** `lawyerName` es el nombre para mostrar del usuario sintético definido en el skeleton.
+
+Supuestos agregados durante la construcción (dev-backend, dev-frontend, integración):
+
+14. **Formato de fecha estricto (backend):** el controller usa un editor de fechas propio: solo se acepta `\d{4}-\d{2}-\d{2}` seguido de un parseo estricto, por lo que `2026-02-30` y `+2026-11-01` se rechazan. Si ambos parámetros están mal formados, ambos aparecen en `errors[]`. El mensaje es fijo ("Debe ser una fecha válida con formato AAAA-MM-DD.") y nunca repite la entrada.
+15. **Parámetros vacíos:** `from=` (vacío) cuenta como no enviado, igual que el comportamiento por defecto de Spring. Vacíos en ambos → ventana por defecto; vacío en uno solo → error de parámetro faltante (Supuesto 5).
+16. **Mensajes de la ventana:** parámetro faltante → "Es obligatorio cuando se informa la otra fecha del rango."; `from > to` → "La fecha inicial no puede ser posterior a la final."; exceso → "El rango no puede superar 92 días.". En una llamada directa al dominio con ambas fechas ausentes se reportan los dos campos, pero el servicio usa la ventana por defecto en ese caso.
+17. **Excepción de validación con varios campos:** se agregó `DomainValidationException` en `domain.shared` con una lista de errores por campo; `ProblemCatalog` la mapea a `400 "Solicitud inválida"` y el manejador la expone como `validation-error` con `errors[]`. `InvalidValueException` (un solo campo) no cambia.
+18. **Totales consistentes:** las consultas por asunto y por abogado corren en una única transacción de solo lectura `REPEATABLE READ`, de modo que `byLawyer` suma lo mismo que `totals` aunque haya escrituras concurrentes.
+19. **Índice (tarea 2.7):** sin índice, la consulta del socio hacía un escaneo completo de `time_entries`; `V4__dashboard_indexes.sql` agrega `ix_time_entries_work_date_status (work_date, status)`. `DashboardReadAdapterIT` ejecuta `EXPLAIN` con los escaneos secuenciales desactivados y comprueba que ninguna de las cuatro consultas recorre la tabla completa (ver "Migration Plan").
+20. **Regla de seguridad explícita:** `GET /api/dashboard/summary` tiene una regla de URL que admite `PARTNER` y `LAWYER`. Un token válido siempre lleva uno de esos roles, así que sigue sin existir un `403` alcanzable (Supuesto 11).
+21. **Abogado ausente en `users`:** si el `LAWYER` autenticado no tiene horas y su usuario no existe en `users` (no debería ocurrir con un token válido), el servicio lanza `UserNotFoundException`, que el catálogo mapea a `404`; está cubierto por un test de aplicación.
+22. **Seed de demo (tarea 2.8, design D6):** no se agregó un `R__` nuevo: el seed de C2 `R__seed_time_entries.sql` ya tiene registros `APPROVED`, `PENDING` y `REJECTED` con fechas relativas de 1 a 9 días atrás, dentro de la ventana por defecto. La verificación con compose la cubren el E2E del Tablero y la evidencia.
+23. **Formato de horas en la UI:** se sigue design D5 (`Intl.NumberFormat('es-BO', {maximumFractionDigits: 1})`: "3,5 h", "4 h", "0 h") con un helper propio del tablero, no el `formatHours` de C2.
+24. **Estado vacío en E2E y evidencia:** el seed de demo siempre tiene horas dentro de los 30 días, así que el estado vacío del E2E y de la captura usa un `page.route` que simula la respuesta de `/api/dashboard/summary`. El comportamiento real con ventana vacía lo cubren los IT del backend (tarea 4.3).
+25. **Sesión expirada en E2E:** el E2E abre `/tablero` sin sesión, en lugar de con un token expirado, para no sumar inicios de sesión bajo el límite de nginx (5 por minuto por IP); la redirección al login es la misma. El token expirado lo cubren el IT del backend y el test Vitest.
+26. **Sin códigos de problema nuevos en la UI:** el frontend nunca envía `from`/`to`, por lo que un `400` muestra el mensaje genérico de `validation-error`.
+27. **Rótulo de asunto y leyenda:** la cabecera de fila por asunto es "código — título", como en C2. Una leyenda breve bajo las tablas indica que el segmento sólido es aprobadas, el rayado es pendientes y que las rechazadas no se cuentan.

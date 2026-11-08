@@ -53,7 +53,10 @@ test('evidencia C3: tablero del socio, del abogado, vacío y en escala de grises
 
   // 04 — escala de grises: aprobadas (sólido) vs pendientes (rayado) se distinguen sin color.
   await openDashboard(socia);
-  await socia.addStyleTag({ content: 'html { filter: grayscale(1); }' });
+  // La CSP (default-src 'self') bloquea un <style> inyectado; el CSSOM sí está permitido.
+  await socia.evaluate(() => {
+    document.documentElement.style.filter = 'grayscale(1)';
+  });
   await capture(socia, '04-tablero-escala-grises');
 
   await socia.context().close();

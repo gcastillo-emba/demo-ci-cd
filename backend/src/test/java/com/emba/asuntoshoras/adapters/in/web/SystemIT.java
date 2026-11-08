@@ -20,6 +20,7 @@ class SystemIT extends AbstractIT {
         .andExpect(jsonPath("$.code").value("unauthenticated"));
   }
 
+  // Scenario: Perfil demo con el asistente encendido
   @Test
   void featuresExposeDescriptionAssistantEnabledInDemo() throws Exception {
     String token = accessToken("abogado1@asuntos.test");

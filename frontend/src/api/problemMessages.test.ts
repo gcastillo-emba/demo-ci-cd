@@ -95,7 +95,13 @@ const CONTRACT_CODES = [
   ...new Set([...contractYaml.matchAll(/^\s*code: ([a-z][a-z-]*)\s*$/gm)].map((m) => m[1]!)),
 ];
 // `invalid-credentials` lo resuelve la pantalla de login con el detail del servidor.
-const SCREEN_HANDLED_CODES = new Set(['invalid-credentials']);
+// `assistant-note-*` son códigos de campo (`errors[].code`, C4): los traduce
+// `assistantErrorMessage` (ver assistant.test.ts).
+const SCREEN_HANDLED_CODES = new Set([
+  'invalid-credentials',
+  'assistant-note-empty',
+  'assistant-note-too-long',
+]);
 
 const C2_CODES = [
   'hours-invalid-increment',

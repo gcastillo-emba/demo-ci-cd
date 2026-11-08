@@ -231,7 +231,7 @@ Guion sugerido para mostrar cada capacidad en la demo. Las secciones marcadas **
 | C1 — Clientes y asuntos         | `add-clients-matters`       | Disponible         |
 | C2 — Registro de horas          | `add-time-entries`          | Disponible         |
 | C3 — Tablero de horas           | `add-hours-dashboard`       | Disponible         |
-| C4 — Asistente de descripciones | `add-description-assistant` | Pendiente          |
+| C4 — Asistente de descripciones | `add-description-assistant` | Disponible         |
 
 ### C1 — Clientes y asuntos
 
@@ -253,9 +253,14 @@ Guion sugerido para mostrar cada capacidad en la demo. Las secciones marcadas **
 2. Como ABOGADO, el mismo tablero muestra solo sus horas: una fila propia, con ceros si no cargó horas en el período.
 3. Evidencia de referencia: `docs/evidence/add-hours-dashboard/`.
 
-### C4 — Asistente de descripciones (pendiente)
+### C4 — Asistente de descripciones
 
-_Se completa al fusionar `feat(c4)`: sugerencias del asistente con el adaptador `fake` (flag `app.features.description-assistant`, activo en el perfil `demo`); aceptar, editar o descartar._
+1. El perfil `demo` activa el indicador `app.features.description-assistant` y usa el adaptador simulado (`fake`, determinista). Para usar el modelo real: `APP_ASSISTANT_PROVIDER=anthropic` y `ANTHROPIC_API_KEY` en el entorno del backend (genera costo).
+2. Como ABOGADO, en **Registrar horas**: escribir una nota libre (p. ej. "llamada con cliente revisión contrato") y pulsar **Sugerir descripción**.
+3. La sugerencia se muestra como texto plano. **Aceptar** la copia a la descripción, **Editar** la copia y enfoca el campo, y **Descartar** la borra. No se guarda nada hasta enviar el formulario.
+4. Guardrails: nota de 1 a 500 caracteres y sugerencia de hasta 300; correos y teléfonos redactados; timeout de 8 s con `503`; los logs no guardan texto.
+5. Evals: `npm run evals` corre los 10 casos de `evals/description-assistant/cases/` contra el adaptador `fake` (también en CI). El job manual `evals-real.yml` los corre contra el modelo real si existe el secreto.
+6. Evidencia de referencia: `docs/evidence/add-description-assistant/`.
 
 ## Anexo A: verificación cronometrada (`demo:check`)
 

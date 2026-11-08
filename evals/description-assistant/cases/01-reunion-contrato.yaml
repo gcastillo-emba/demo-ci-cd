@@ -1,0 +1,9 @@
+# Palabras clave de actividad y documento (design D11, caso 01).
+id: 01-reunion-contrato
+note: reunion cliente revisar contrato arrendamiento
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  language: es
+  mustContainAny: [reunión, contrato]

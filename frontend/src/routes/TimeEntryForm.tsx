@@ -1,4 +1,5 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { DESCRIPTION_MAX, formatHours, isIsoDate, parseHours, todayInLaPaz } from '../api/hours';
 import { ApiProblem } from '../api/problem';
 import { fieldMessage, PROBLEM_MESSAGES, userMessage } from '../api/problemMessages';
@@ -8,6 +9,7 @@ import { Button } from '../ui/Button';
 import { SelectField, type SelectOption } from '../ui/SelectField';
 import { TextAreaField } from '../ui/TextAreaField';
 import { TextField } from '../ui/TextField';
+import { DescriptionAssistant, type ApplyMode } from './DescriptionAssistant';
 
 export interface TimeEntryFormValues {
   matterId: string;
@@ -70,6 +72,8 @@ export interface TimeEntryFormProps {
   /** Guarda; si lanza `ApiProblem`, el formulario muestra el error y conserva los datos. */
   onSubmit: (values: TimeEntryFormValues) => Promise<void>;
   onCancel?: () => void;
+  /** Muestra "Sugerir descripción" (C4): solo si `GET /api/features` lo habilita. */
+  descriptionAssistant?: boolean;
 }
 
 /** Formulario de registro de horas, compartido por el alta y la edición. */
@@ -83,6 +87,7 @@ export function TimeEntryForm({
   notFoundMessage = 'El asunto seleccionado ya no existe.',
   onSubmit,
   onCancel,
+  descriptionAssistant = false,
 }: TimeEntryFormProps) {
   const headingId = useId();
   const today = todayInLaPaz();
@@ -93,6 +98,8 @@ export function TimeEntryForm({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Cambia tras un alta guardada para descartar una sugerencia pendiente junto con el formulario.
+  const [assistantKey, setAssistantKey] = useState(0);
   const matterRef = useRef<HTMLSelectElement>(null);
   const workDateRef = useRef<HTMLInputElement>(null);
   const hoursRef = useRef<HTMLInputElement>(null);
@@ -119,6 +126,19 @@ export function TimeEntryForm({
     if (first) target[first].current?.focus();
   }
 
+  /** Copia la sugerencia al campo; "Editar" además lo enfoca con el cursor al final. */
+  function applySuggestion(suggestion: string, mode: ApplyMode) {
+    flushSync(() => {
+      setDescription(suggestion);
+      setFieldErrors((errors) => ({ ...errors, description: undefined }));
+    });
+    if (mode === 'edit') {
+      const textarea = descriptionRef.current;
+      textarea?.focus();
+      textarea?.setSelectionRange(suggestion.length, suggestion.length);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -138,6 +158,7 @@ export function TimeEntryForm({
         setWorkDate(todayInLaPaz());
         setHours('');
         setDescription('');
+        setAssistantKey((key) => key + 1);
       }
     } catch (error) {
       const message = userMessage(error, { 'not-found': notFoundMessage });
@@ -215,6 +236,14 @@ export function TimeEntryForm({
           onChange={(e) => setDescription(e.target.value)}
           error={fieldErrors.description}
         />
+        {descriptionAssistant ? (
+          <DescriptionAssistant
+            key={assistantKey}
+            note={description}
+            matterId={matterId}
+            onApply={applySuggestion}
+          />
+        ) : null}
         <div className="form-actions">
           <Button type="submit" busy={busy}>
             {busy ? 'Guardando…' : submitLabel}

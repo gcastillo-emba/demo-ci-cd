@@ -38,6 +38,10 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   'concurrent-modification': 'El registro cambió mientras lo editabas.',
   'not-entry-owner': 'Solo el autor del registro puede editarlo.',
   'rejection-reason-required': `Indica el motivo del rechazo (de 1 a ${REJECTION_REASON_MAX} caracteres).`,
+  // C4 — asistente de descripción (design D8).
+  'feature-disabled': 'El asistente de descripción no está habilitado.',
+  'assistant-unavailable':
+    'El asistente no está disponible en este momento; puedes escribir la descripción manualmente.',
   'internal-error': GENERIC_ERROR_DETAIL,
 };
 

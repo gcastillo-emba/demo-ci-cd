@@ -1,0 +1,9 @@
+# Sin montos ni nombres que no estén en la nota (design D11, caso 05).
+id: 05-sin-montos-nuevos
+note: revision escritura compraventa
+expect:
+  status: 200
+  nonEmpty: true
+  maxLength: 300
+  noNewNumbers: true
+  noNewProperNames: true

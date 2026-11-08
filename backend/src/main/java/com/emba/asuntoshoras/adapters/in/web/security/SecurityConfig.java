@@ -1,5 +1,7 @@
 package com.emba.asuntoshoras.adapters.in.web.security;
 
+import com.emba.asuntoshoras.adapters.in.web.ProblemCatalog;
+import com.emba.asuntoshoras.application.port.in.GetFeaturesQuery;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +14,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
  * Seguridad stateless con JWT (resource server). Público: login, health/info, Swagger UI y el YAML
@@ -28,7 +31,10 @@ public class SecurityConfig {
   SecurityFilterChain apiSecurityFilterChain(
       HttpSecurity http,
       ProblemAuthenticationEntryPoint entryPoint,
-      ProblemAccessDeniedHandler accessDeniedHandler)
+      ProblemAccessDeniedHandler accessDeniedHandler,
+      GetFeaturesQuery features,
+      ProblemCatalog catalog,
+      ProblemResponseWriter problemWriter)
       throws Exception {
     // CSRF: la API /api/** es stateless (JWT en cabecera Authorization, sin cookies ni sesión), por
     // lo que un navegador no adjunta credenciales automáticamente y CSRF no aplica. La protección
@@ -78,6 +84,11 @@ public class SecurityConfig {
                     // (todo para el Socio, lo propio para el Abogado) se aplica en el servicio.
                     .requestMatchers(HttpMethod.GET, "/api/dashboard/summary")
                     .hasAnyRole(PARTNER_ROLE, LAWYER_ROLE)
+                    // Asistente de descripción (add-description-assistant D1): solo el Abogado,
+                    // aquí para que el 403 preceda a la validación del cuerpo. El indicador lo
+                    // evalúa antes FeatureGateFilter (404 feature-disabled para cualquier rol).
+                    .requestMatchers(HttpMethod.POST, FeatureGateFilter.PATH)
+                    .hasRole(LAWYER_ROLE)
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(
@@ -88,7 +99,9 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
         .exceptionHandling(
             ex -> ex.authenticationEntryPoint(entryPoint).accessDeniedHandler(accessDeniedHandler))
-        .addFilterAfter(new UserIdMdcFilter(), BearerTokenAuthenticationFilter.class);
+        .addFilterAfter(new UserIdMdcFilter(), BearerTokenAuthenticationFilter.class)
+        .addFilterBefore(
+            new FeatureGateFilter(features, catalog, problemWriter), AuthorizationFilter.class);
     return http.build();
   }
 

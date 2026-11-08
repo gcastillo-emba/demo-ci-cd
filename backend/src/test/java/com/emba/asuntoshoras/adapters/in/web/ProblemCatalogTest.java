@@ -3,7 +3,21 @@ package com.emba.asuntoshoras.adapters.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.emba.asuntoshoras.domain.shared.DomainException;
+import com.emba.asuntoshoras.domain.shared.InvalidValueException;
 import com.emba.asuntoshoras.domain.shared.NotFoundException;
+import com.emba.asuntoshoras.domain.timeentry.ConcurrentModificationException;
+import com.emba.asuntoshoras.domain.timeentry.DailyHoursExceededException;
+import com.emba.asuntoshoras.domain.timeentry.DailyHoursPolicy;
+import com.emba.asuntoshoras.domain.timeentry.EditWindowExpiredException;
+import com.emba.asuntoshoras.domain.timeentry.EntryNotPendingException;
+import com.emba.asuntoshoras.domain.timeentry.FutureDateException;
+import com.emba.asuntoshoras.domain.timeentry.Hours;
+import com.emba.asuntoshoras.domain.timeentry.HoursInvalidIncrementException;
+import com.emba.asuntoshoras.domain.timeentry.HoursOutOfRangeException;
+import com.emba.asuntoshoras.domain.timeentry.MatterClosedException;
+import com.emba.asuntoshoras.domain.timeentry.NotEntryOwnerException;
+import com.emba.asuntoshoras.domain.timeentry.RejectionReasonRequiredException;
+import com.emba.asuntoshoras.domain.timeentry.TimeEntryNotFoundException;
 import com.emba.asuntoshoras.domain.user.InvalidCredentialsException;
 import com.emba.asuntoshoras.domain.user.UserNotFoundException;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -11,6 +25,8 @@ import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -70,5 +86,47 @@ class ProblemCatalogTest {
 
     assertThat(catalog.find(Orphan.class)).isEmpty();
     assertThat(catalog.find(String.class)).isEmpty();
+  }
+
+  /** Tarea 2.3: los 10 slugs nuevos de C2 (design D6) y su estado HTTP. */
+  @Test
+  void mapsTimeEntrySlugsToTheirStatus() {
+    Map<DomainException, HttpStatus> expected =
+        Map.ofEntries(
+            Map.entry(new HoursInvalidIncrementException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new HoursOutOfRangeException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(
+                new DailyHoursExceededException(DailyHoursPolicy.DAILY_LIMIT, Hours.ZERO),
+                HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new FutureDateException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new MatterClosedException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new EditWindowExpiredException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new EntryNotPendingException(), HttpStatus.CONFLICT),
+            Map.entry(new ConcurrentModificationException(), HttpStatus.CONFLICT),
+            Map.entry(new NotEntryOwnerException(), HttpStatus.FORBIDDEN),
+            Map.entry(new RejectionReasonRequiredException(), HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(new TimeEntryNotFoundException(UUID.randomUUID()), HttpStatus.NOT_FOUND),
+            Map.entry(new InvalidValueException("from", "x"), HttpStatus.BAD_REQUEST));
+
+    assertThat(expected.keySet())
+        .extracting(DomainException::code)
+        .contains(
+            "hours-invalid-increment",
+            "hours-out-of-range",
+            "daily-hours-exceeded",
+            "future-date",
+            "matter-closed",
+            "edit-window-expired",
+            "entry-not-pending",
+            "concurrent-modification",
+            "not-entry-owner",
+            "rejection-reason-required",
+            "not-found",
+            "validation-error");
+    expected.forEach(
+        (exception, status) ->
+            assertThat(catalog.find(exception.getClass()))
+                .as(exception.code())
+                .hasValueSatisfying(e -> assertThat(e.status()).isEqualTo(status)));
   }
 }

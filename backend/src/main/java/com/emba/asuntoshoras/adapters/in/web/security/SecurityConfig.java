@@ -22,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
   static final String PARTNER_ROLE = "PARTNER";
+  static final String LAWYER_ROLE = "LAWYER";
 
   @Bean
   SecurityFilterChain apiSecurityFilterChain(
@@ -60,6 +61,18 @@ public class SecurityConfig {
                     // responde 405 method-not-allowed para cualquier rol (S6).
                     .requestMatchers(
                         HttpMethod.POST, "/api/clients", "/api/matters", "/api/matters/*/close")
+                    .hasRole(PARTNER_ROLE)
+                    // Registros de horas (add-time-entries D5): alta y edición solo para el
+                    // Abogado; aprobación y rechazo solo para el Socio. El listado queda abierto a
+                    // ambos roles (el alcance se aplica en el servicio).
+                    .requestMatchers(HttpMethod.POST, "/api/time-entries")
+                    .hasRole(LAWYER_ROLE)
+                    .requestMatchers(HttpMethod.PUT, "/api/time-entries/*")
+                    .hasRole(LAWYER_ROLE)
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/time-entries/*/approve",
+                        "/api/time-entries/*/reject")
                     .hasRole(PARTNER_ROLE)
                     .anyRequest()
                     .authenticated())

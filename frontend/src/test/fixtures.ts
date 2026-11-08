@@ -1,5 +1,7 @@
-// Datos 100 % sintéticos para los tests de Clientes y Asuntos.
+// Datos 100 % sintéticos para los tests de Clientes, Asuntos y Registros de horas.
 import type { Client, Matter } from '../api/clientsMatters';
+import { addDays, todayInLaPaz } from '../api/hours';
+import type { TimeEntry } from '../api/timeEntries';
 import { TOKEN_KEY } from '../api/token';
 import { jsonResponse } from './utils';
 
@@ -76,3 +78,37 @@ export const internalErrorProblem = {
   code: 'internal-error',
   traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
 };
+
+/** Registro de horas sintético; por defecto `PENDING`, de `abogado`, creado ayer y editable. */
+export function makeTimeEntry(matter: Matter, overrides: Partial<TimeEntry> = {}): TimeEntry {
+  const today = todayInLaPaz();
+  const createdOn = addDays(today, -1);
+  return {
+    id: uuid('e0000000'),
+    matterId: matter.id,
+    matterCode: matter.code,
+    lawyerId: abogado.id,
+    lawyerName: abogado.fullName,
+    workDate: createdOn,
+    hours: 1.5,
+    description: 'Revisión de contrato de compraventa.',
+    status: 'PENDING',
+    rejectionReason: null,
+    createdAt: `${createdOn}T14:00:00Z`,
+    editableUntil: addDays(createdOn, 7),
+    version: 0,
+    ...overrides,
+  };
+}
+
+export function problem(status: number, code: string, detail: string, extra: object = {}) {
+  return {
+    type: `https://asuntos-horas.example/problems/${code}`,
+    title: 'Error',
+    status,
+    detail,
+    code,
+    traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    ...extra,
+  };
+}

@@ -116,6 +116,26 @@ describe('ApiProblem', () => {
     expect(problem.detail).toBe(TOO_MANY_REQUESTS_DETAIL);
   });
 
+  it('conserva solo los miembros de extensión numéricos (daily-hours-exceeded)', () => {
+    const problem = toApiProblem(422, {
+      status: 422,
+      code: 'daily-hours-exceeded',
+      title: 'Límite diario superado',
+      detail: 'Se supera el límite diario.',
+      limitHours: 24,
+      alreadyLoggedHours: 20.5,
+      internal: 'org.example.Secret',
+      nan: Number.NaN,
+    });
+
+    expect(problem.numberExtension('limitHours')).toBe(24);
+    expect(problem.numberExtension('alreadyLoggedHours')).toBe(20.5);
+    expect(problem.numberExtension('internal')).toBeUndefined();
+    expect(problem.numberExtension('status')).toBeUndefined();
+    expect(problem.numberExtension('toString')).toBeUndefined();
+    expect(Object.keys(problem.extensions)).toEqual(['limitHours', 'alreadyLoggedHours']);
+  });
+
   it('errorMessage traduce cualquier error a un mensaje en español', () => {
     expect(errorMessage(toApiProblem(401, invalidCredentials))).toBe(invalidCredentials.detail);
     expect(errorMessage(new TypeError('Failed to fetch'))).toBe(NETWORK_ERROR_DETAIL);

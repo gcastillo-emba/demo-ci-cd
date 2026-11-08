@@ -4,35 +4,38 @@ Lenguaje ubicuo del POC. Regla: **documentación y UI en español; código, iden
 
 ## Dominio
 
-| Español (docs/UI)   | Identificador en inglés     | Definición                                                                                                                   |
-| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Cliente             | `Client`                    | Persona u organización (sintética) a la que la firma presta servicios.                                                       |
-| NIT                 | `taxId`                     | Identificación tributaria opcional del cliente (texto libre 1..50), única si se informa.                                     |
-| Asunto              | `Matter`                    | Caso o encargo de un cliente al que se imputan horas.                                                                        |
-| Código de asunto    | `MatterCode` (`matterCode`) | Identificador legible y único del asunto (value object).                                                                     |
-| Estado del asunto   | `MatterStatus`              | `OPEN` o `CLOSED`.                                                                                                           |
-| Abierto             | `OPEN`                      | Asunto que admite nuevos registros de horas.                                                                                 |
-| Cerrado             | `CLOSED`                    | Asunto que no admite nuevos registros ni edición de los existentes; sus pendientes aún pueden aprobarse o rechazarse.        |
-| Fecha de cierre     | `closedAt`                  | Instante en que el asunto pasó a `CLOSED`. No hay reapertura.                                                                |
-| Registro de horas   | `TimeEntry`                 | Horas trabajadas por un abogado en un asunto en una fecha, con descripción.                                                  |
-| Fecha de trabajo    | `workDate`                  | Día en que se realizó el trabajo (no la fecha de carga). "Hoy" se calcula con `Clock` en `America/La_Paz`.                   |
-| Horas               | `hours` / `hoursTenths`     | Duración en **décimas de hora enteras** (`hours_tenths`, 1..240; 15 = 1,5 h). La API puede exponer `hours` decimal derivado. |
-| Descripción         | `description`               | Texto libre del trabajo realizado.                                                                                           |
-| Estado del registro | `TimeEntryStatus`           | `PENDING`, `APPROVED` o `REJECTED`.                                                                                          |
-| Pendiente           | `PENDING`                   | Registro cargado, editable dentro de la ventana de 7 días, a la espera de revisión.                                          |
-| Aprobada            | `APPROVED`                  | Registro aceptado por un socio. Estado terminal.                                                                             |
-| Rechazada           | `REJECTED`                  | Registro rechazado por un socio con motivo. Estado terminal.                                                                 |
-| Motivo de rechazo   | `rejectionReason`           | Texto obligatorio al rechazar.                                                                                               |
-| Límite diario       | `dailyLimit`                | Máximo de 24 h por abogado y día, sumando PENDING y APPROVED.                                                                |
-| Ventana de edición  | `editWindow`                | 7 días desde la creación del registro durante los cuales el autor puede editarlo.                                            |
-| Editable hasta      | `editableUntil`             | Última fecha (en `America/La_Paz`) en que el registro puede editarse: fecha de creación + 7.                                 |
-| Versión             | `version`                   | Contador de concurrencia optimista del registro; una versión obsoleta produce `409 concurrent-modification`.                 |
-| Aprobaciones        | —                           | Pantalla (cola) del socio con los registros `PENDING` de todos los abogados para aprobar o rechazar.                         |
-| Tablero             | `Dashboard`                 | Vista de horas agregadas, con alcance según el rol. La UI usa la ventana fija de 30 días; la API admite `from`/`to`.         |
-| Resumen del tablero | `DashboardSummary`          | Respuesta de `GET /api/dashboard/summary`: `byMatter[]`, `byLawyer[]`, `totals` y la ventana efectiva.                       |
-| Ventana de fechas   | `DateWindow` (`from`/`to`)  | Rango inclusivo de `workDate`; por defecto `[hoy-29, hoy]` en `America/La_Paz`, máximo 92 días.                              |
-| Horas aprobadas     | `approvedHours`             | Suma de horas `APPROVED` en la ventana.                                                                                      |
-| Horas pendientes    | `pendingHours`              | Suma de horas `PENDING` en la ventana. `REJECTED` nunca suma.                                                                |
+| Español (docs/UI)   | Identificador en inglés     | Definición                                                                                                                                                   |
+| ------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cliente             | `Client`                    | Persona u organización (sintética) a la que la firma presta servicios.                                                                                       |
+| NIT                 | `taxId`                     | Identificación tributaria opcional del cliente (texto libre 1..50), única si se informa.                                                                     |
+| Asunto              | `Matter`                    | Caso o encargo de un cliente al que se imputan horas.                                                                                                        |
+| Código de asunto    | `MatterCode` (`matterCode`) | Identificador legible y único del asunto (value object).                                                                                                     |
+| Estado del asunto   | `MatterStatus`              | `OPEN` o `CLOSED`.                                                                                                                                           |
+| Abierto             | `OPEN`                      | Asunto que admite nuevos registros de horas.                                                                                                                 |
+| Cerrado             | `CLOSED`                    | Asunto que no admite nuevos registros ni edición de los existentes; sus pendientes aún pueden aprobarse o rechazarse.                                        |
+| Fecha de cierre     | `closedAt`                  | Instante en que el asunto pasó a `CLOSED`. No hay reapertura.                                                                                                |
+| Registro de horas   | `TimeEntry`                 | Horas trabajadas por un abogado en un asunto en una fecha, con descripción.                                                                                  |
+| Fecha de trabajo    | `workDate`                  | Día en que se realizó el trabajo (no la fecha de carga). "Hoy" se calcula con `Clock` en `America/La_Paz`.                                                   |
+| Horas               | `hours` / `hoursTenths`     | Duración en **décimas de hora enteras** (`hours_tenths`, 1..240; 15 = 1,5 h). La API puede exponer `hours` decimal derivado.                                 |
+| Descripción         | `description`               | Texto libre del trabajo realizado.                                                                                                                           |
+| Estado del registro | `TimeEntryStatus`           | `PENDING`, `APPROVED` o `REJECTED`.                                                                                                                          |
+| Pendiente           | `PENDING`                   | Registro cargado, editable dentro de la ventana de 7 días, a la espera de revisión.                                                                          |
+| Aprobada            | `APPROVED`                  | Registro aceptado por un socio. Estado terminal.                                                                                                             |
+| Rechazada           | `REJECTED`                  | Registro rechazado por un socio con motivo. Estado terminal.                                                                                                 |
+| Motivo de rechazo   | `rejectionReason`           | Texto obligatorio al rechazar.                                                                                                                               |
+| Límite diario       | `dailyLimit`                | Máximo de 24 h por abogado y día, sumando PENDING y APPROVED.                                                                                                |
+| Horas ya cargadas   | `alreadyLoggedHours`        | Miembro de extensión de `422 daily-hours-exceeded`: horas `PENDING` + `APPROVED` del abogado ese día sin el registro en curso; va junto a `limitHours` (24). |
+| Ventana de edición  | `editWindow`                | 7 días desde la creación del registro durante los cuales el autor puede editarlo.                                                                            |
+| Editable hasta      | `editableUntil`             | Última fecha (en `America/La_Paz`) en que el registro puede editarse: fecha de creación + 7.                                                                 |
+| Versión             | `version`                   | Contador de concurrencia optimista del registro; una versión obsoleta produce `409 concurrent-modification`.                                                 |
+| Aprobaciones        | —                           | Pantalla (cola) del socio con los registros `PENDING` de todos los abogados para aprobar o rechazar.                                                         |
+| Registrar horas     | —                           | Pantalla del abogado para cargar un registro de horas en un asunto `OPEN`.                                                                                   |
+| Mis registros       | —                           | Pantalla del abogado con sus registros paginados, su estado, el motivo de rechazo y la acción "Editar" mientras sea editable.                                |
+| Tablero             | `Dashboard`                 | Vista de horas agregadas, con alcance según el rol. La UI usa la ventana fija de 30 días; la API admite `from`/`to`.                                         |
+| Resumen del tablero | `DashboardSummary`          | Respuesta de `GET /api/dashboard/summary`: `byMatter[]`, `byLawyer[]`, `totals` y la ventana efectiva.                                                       |
+| Ventana de fechas   | `DateWindow` (`from`/`to`)  | Rango inclusivo de `workDate`; por defecto `[hoy-29, hoy]` en `America/La_Paz`, máximo 92 días.                                                              |
+| Horas aprobadas     | `approvedHours`             | Suma de horas `APPROVED` en la ventana.                                                                                                                      |
+| Horas pendientes    | `pendingHours`              | Suma de horas `PENDING` en la ventana. `REJECTED` nunca suma.                                                                                                |
 
 ## Personas y seguridad
 

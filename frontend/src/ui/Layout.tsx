@@ -30,6 +30,22 @@ export function Layout({ children }: { children: ReactNode }) {
                   <li>
                     <NavLink to="/asuntos">Asuntos</NavLink>
                   </li>
+                  {/* Navegación por rol (spec "Pantalla Registrar horas" y "Pantalla Aprobaciones"). */}
+                  {user.role === 'LAWYER' ? (
+                    <>
+                      <li>
+                        <NavLink to="/registrar-horas">Registrar horas</NavLink>
+                      </li>
+                      <li>
+                        <NavLink to="/mis-registros">Mis registros</NavLink>
+                      </li>
+                    </>
+                  ) : null}
+                  {user.role === 'PARTNER' ? (
+                    <li>
+                      <NavLink to="/aprobaciones">Aprobaciones</NavLink>
+                    </li>
+                  ) : null}
                 </ul>
               </nav>
               <div className="app-header__user">

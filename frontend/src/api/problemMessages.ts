@@ -1,4 +1,16 @@
-import { ApiProblem, errorMessage, GENERIC_ERROR_DETAIL } from './problem';
+import {
+  formatHours,
+  HOURS_INCREMENT_MESSAGE,
+  HOURS_RANGE_MESSAGE,
+  MAX_DAILY_HOURS,
+  REJECTION_REASON_MAX,
+} from './hours';
+import {
+  ApiProblem,
+  errorMessage,
+  GENERIC_ERROR_DETAIL,
+  TOO_MANY_REQUESTS_DETAIL,
+} from './problem';
 
 /**
  * Mensajes en español por `code` estable de Problem Details (design D9). El `detail` del servidor
@@ -13,8 +25,38 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   'method-not-allowed': 'La operación solicitada no está permitida.',
   'client-tax-id-taken': 'Ya existe un cliente con esa identificación tributaria.',
   'matter-already-closed': 'El asunto ya estaba cerrado.',
+  // Rate limiting del login en nginx (429, ADR-006).
+  'too-many-requests': TOO_MANY_REQUESTS_DETAIL,
+  // C2 — registros de horas (design D6 y D8).
+  'hours-invalid-increment': HOURS_INCREMENT_MESSAGE,
+  'hours-out-of-range': HOURS_RANGE_MESSAGE,
+  'daily-hours-exceeded': `Se supera el límite de ${MAX_DAILY_HOURS} horas diarias para ese día.`,
+  'future-date': 'No se pueden registrar horas en fechas futuras.',
+  'matter-closed': 'El asunto está cerrado: no admite registros de horas.',
+  'edit-window-expired': 'Venció el plazo de 7 días para editar este registro.',
+  'entry-not-pending': 'El registro ya no está pendiente: otro usuario lo resolvió.',
+  'concurrent-modification': 'El registro cambió mientras lo editabas.',
+  'not-entry-owner': 'Solo el autor del registro puede editarlo.',
+  'rejection-reason-required': `Indica el motivo del rechazo (de 1 a ${REJECTION_REASON_MAX} caracteres).`,
   'internal-error': GENERIC_ERROR_DETAIL,
 };
+
+/**
+ * Mensaje de `daily-hours-exceeded` con los miembros de extensión `limitHours` y
+ * `alreadyLoggedHours` (spec "Error de límite diario visible": límite, horas ya cargadas y las que
+ * quedan). Si faltan, cae en el mensaje genérico del código.
+ */
+export function dailyLimitMessage(problem: ApiProblem): string {
+  const limit = problem.numberExtension('limitHours') ?? MAX_DAILY_HOURS;
+  const already = problem.numberExtension('alreadyLoggedHours');
+  if (already === undefined)
+    return PROBLEM_MESSAGES['daily-hours-exceeded'] ?? GENERIC_ERROR_DETAIL;
+  const remaining = Math.max(limit - already, 0);
+  return (
+    `Se supera el límite de ${formatHours(limit)} horas diarias: ya tienes ` +
+    `${formatHours(already)} h registradas ese día y te quedan ${formatHours(remaining)} h.`
+  );
+}
 
 export const INVALID_FIELD_MESSAGE = 'El valor no es válido.';
 
@@ -42,6 +84,9 @@ export function userMessage(
   overrides: Readonly<Record<string, string>> = {},
 ): string {
   if (!(error instanceof ApiProblem)) return errorMessage(error);
+  if (error.code === 'daily-hours-exceeded' && !overrides[error.code]) {
+    return dailyLimitMessage(error);
+  }
   const mapped = overrides[error.code] ?? PROBLEM_MESSAGES[error.code];
   if (mapped) return mapped;
   if (error.status >= 500 || looksInternal(error.detail)) return GENERIC_ERROR_DETAIL;

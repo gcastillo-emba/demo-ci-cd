@@ -6,6 +6,8 @@ const isCI = Boolean(process.env.CI);
 export default defineConfig({
   testDir: './tests',
   // La evidencia visual (@evidencia) no corre por defecto: ver playwright.evidence.config.ts.
+  // UN login por rol y storageState en e2e/.auth/ (rate limiting del login en nginx, ADR-006).
+  globalSetup: './global-setup.ts',
   testIgnore: ['**/evidence/**', '**/support/**'],
   grepInvert: /@evidencia/,
   fullyParallel: true,

@@ -1,7 +1,8 @@
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
-import { createClient, createMatter, login, runId, SOCIA } from '../support/session';
+import type { Page } from '@playwright/test';
+import { expect, SOCIA_STATE, test } from '../support/auth';
+import { createClient, createMatter, openHome, runId, SOCIA } from '../support/session';
 
 // Evidencia visual de C1 (tarea 4.4). Fuera de la corrida por defecto: solo con
 // `npm run evidence -w e2e` (playwright.evidence.config.ts). Capturas en docs/evidence/add-clients-matters/.
@@ -14,12 +15,15 @@ async function capture(page: Page, name: string) {
   await page.screenshot({ path: `${OUT_DIR}${name}.png`, fullPage: true });
 }
 
+// Sesión reutilizada (global-setup) por el rate limiting del login en nginx (ADR-006).
+test.use({ storageState: SOCIA_STATE });
+
 test('evidencia C1: Clientes, Asuntos, alta, diálogo de cierre y asunto cerrado @evidencia', async ({
   page,
 }) => {
   const id = runId();
   const clientName = `Cliente Evidencia ${id}`;
-  await login(page, SOCIA);
+  await openHome(page, SOCIA);
 
   await createClient(page, clientName, `EVID-${id}`);
   await page.goto('/clientes');

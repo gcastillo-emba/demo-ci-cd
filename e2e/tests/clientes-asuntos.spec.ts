@@ -1,16 +1,27 @@
-import { expect, test } from '@playwright/test';
-import { ABOGADO, createClient, createMatter, goTo, login, runId, SOCIA } from './support/session';
+import { ABOGADO_STATE, expect, SOCIA_STATE, test } from './support/auth';
+import {
+  ABOGADO,
+  createClient,
+  createMatter,
+  goTo,
+  openHome,
+  runId,
+  SOCIA,
+} from './support/session';
 
 // C1 add-clients-matters — tareas 4.2 y 4.3. Datos sintéticos con sufijo único por ejecución.
 
 test.describe('Clientes y asuntos — Socio', () => {
+  // Sesión reutilizada (global-setup): sin login real por el rate limiting de nginx (ADR-006).
+  test.use({ storageState: SOCIA_STATE });
+
   test('crea un cliente y un asunto, lo filtra, pagina y lo cierra con confirmación', async ({
     page,
   }) => {
     const id = runId();
     const clientName = `Cliente E2E ${id}`;
     const title = `Asunto E2E ${id}`;
-    await login(page, SOCIA);
+    await openHome(page, SOCIA);
 
     // Scenario: Socio crea un cliente desde la pantalla
     await createClient(page, clientName, `E2E-${id}`);
@@ -90,7 +101,7 @@ test.describe('Clientes y asuntos — Socio', () => {
   }) => {
     const id = runId();
     const taxId = `E2E-DUP-${id}`;
-    await login(page, SOCIA);
+    await openHome(page, SOCIA);
     await createClient(page, `Cliente Duplicado A ${id}`, taxId);
 
     await page.getByRole('button', { name: 'Nuevo cliente' }).click();
@@ -109,11 +120,13 @@ test.describe('Clientes y asuntos — Socio', () => {
 });
 
 test.describe('Clientes y asuntos — Abogado', () => {
+  test.use({ storageState: ABOGADO_STATE });
+
   // Scenario: Abogado no ve formularios de alta · Abogado no ve la acción de cierre
   test('ve Clientes y Asuntos sin botones de alta ni de cierre, y la API rechaza su POST con 403', async ({
     page,
   }) => {
-    await login(page, ABOGADO);
+    await openHome(page, ABOGADO);
 
     await goTo(page, 'Clientes');
     await expect(page.getByText(/clientes? encontrados?|No se encontraron clientes/)).toBeVisible();

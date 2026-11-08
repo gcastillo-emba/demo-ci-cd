@@ -54,6 +54,11 @@ export class ApiProblem extends Error {
   fieldError(field: string): string | undefined {
     return this.errors.find((e) => e.field === field)?.message;
   }
+
+  /** Código estable del error del campo (`errors[].code`), si la operación lo define (C4). */
+  fieldErrorCode(field: string): string | undefined {
+    return this.errors.find((e) => e.field === field && e.code !== undefined)?.code;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,13 +69,20 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
+/** `errors[].code` es un código estable en kebab-case (C4); cualquier otra cosa se descarta. */
+const FIELD_CODE_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
 function parseFieldErrors(value: unknown): FieldError[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (!isRecord(item)) return [];
     const field = asString(item.field);
     const message = asString(item.message);
-    return field && message ? [{ field, message }] : [];
+    if (!field || !message) return [];
+    const code = asString(item.code);
+    return code && FIELD_CODE_PATTERN.test(code)
+      ? [{ field, code, message }]
+      : [{ field, message }];
   });
 }
 

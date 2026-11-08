@@ -24,9 +24,9 @@ jobs:
       - name: Guard del secreto
         id: guard
         env:
-          K: ${{ secrets.ANTHROPIC_API_KEY }}
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         run: |
-          if [ -n "$K" ]; then
+          if [ "$HAS_KEY" = "true" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"

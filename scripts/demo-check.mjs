@@ -6,7 +6,7 @@
 // `compose up -d --wait` → readiness y login vía nginx (http://localhost:8080) → `down -v`.
 // Imprime los tiempos medidos y, con --metricas, los agrega al archivo indicado.
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { run } from './lib/run.mjs';
 import { acquire } from './lib/lock.mjs';
@@ -88,8 +88,8 @@ export async function main(argv = process.argv.slice(2)) {
     ].join(' ');
     console.log(`✓ [demo] ${resumen}`);
     if (flags.metricas) {
-      mkdirSync(dirname(join(ROOT, flags.metricas)), { recursive: true });
-      appendFileSync(join(ROOT, flags.metricas), `demo-check ${resumen}\n`);
+      mkdirSync(dirname(resolve(ROOT, flags.metricas)), { recursive: true });
+      appendFileSync(resolve(ROOT, flags.metricas), `demo-check ${resumen}\n`);
     }
   } catch (err) {
     code = code || 1;

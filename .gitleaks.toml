@@ -1,0 +1,8 @@
+title = "Asuntos & Horas — gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Archivos generados sin secretos (hashes de integridad del lockfile)"
+paths = ['''package-lock\.json''']

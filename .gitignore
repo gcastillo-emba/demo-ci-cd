@@ -1,0 +1,29 @@
+# deps / builds
+node_modules/
+dist/
+target/
+coverage/
+*.log
+.vite/
+# test output
+playwright-report/
+test-results/
+blob-report/
+# local state (MADA runtime, gate)
+.mada/
+.gate/
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# IDE / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+.DS_Store
+Thumbs.db
+# Claude local
+.claude/settings.local.json

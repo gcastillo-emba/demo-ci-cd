@@ -21,6 +21,8 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+  static final String PARTNER_ROLE = "PARTNER";
+
   @Bean
   SecurityFilterChain apiSecurityFilterChain(
       HttpSecurity http,
@@ -52,6 +54,13 @@ public class SecurityConfig {
                         "/openapi.yaml",
                         "/v3/api-docs/swagger-config")
                     .permitAll()
+                    // Escrituras solo para el Socio, resueltas aquí para que el 403 preceda a la
+                    // Bean Validation del cuerpo (precedencia 401 > 403 > 400 > 404 > 409, S11).
+                    // Solo los métodos declarados: un PATCH/PUT/DELETE llega a Spring MVC y
+                    // responde 405 method-not-allowed para cualquier rol (S6).
+                    .requestMatchers(
+                        HttpMethod.POST, "/api/clients", "/api/matters", "/api/matters/*/close")
+                    .hasRole(PARTNER_ROLE)
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

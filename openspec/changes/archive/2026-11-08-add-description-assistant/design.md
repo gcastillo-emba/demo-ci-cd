@@ -142,6 +142,18 @@ Sin migraciones de base de datos. Despliegue: el flag está apagado en producci�
 11. `evals-real.yml` es manual e informativo; sin `ANTHROPIC_API_KEY` termina en verde sin ejecutar casos, con un aviso.
 12. Los correos y teléfonos se reemplazan por los marcadores `[correo]` y `[teléfono]` (no se eliminan), tanto en la nota enviada al proveedor como en la sugerencia, para que el Abogado vea dónde había un dato y lo complete a mano si corresponde. Montos y nombres no se redactan; el criterio de evals "sin montos ni nombres nuevos" sigue aplicando.
 
+Decisiones tomadas al implementar (constructores e integración):
+
+13. El campo JSON del indicador en `GET /api/features` es `descriptionAssistant` (camelCase, como el resto del contrato); la clave de configuración sigue siendo `app.features.description-assistant`. Precisa el supuesto 2.
+14. `AssistantPrompt` (dominio) arma tanto el prompt de sistema fijo como el mensaje `user` con `<nota>…</nota>`; el servicio lo construye después de redactar la nota.
+15. El adaptador `fake` reformula con un diccionario fijo en español y descarta las palabras desconocidas (no puede introducir nombres, montos ni instrucciones inyectadas); conserva los marcadores `[correo]`/`[teléfono]` y agrega " en el marco del asunto" cuando su oración tiene menos de 3 stopwords en español.
+16. Teléfono = secuencia de 7 o más dígitos con espacios o guiones simples opcionales entre ellos. No se redacta una secuencia precedida por guion, letra, dígito o punto, para conservar códigos de asunto (`AS-2026-0007`) y montos (`1.500.000`); las fechas `AAAA-MM-DD` y `DD/MM/AAAA` se conservan.
+17. Los resultados del evento de log agregan `not_found` a los cinco de D9.
+18. Adaptador `anthropic`: modelo por defecto `claude-opus-5-5` (configurable con `APP_ASSISTANT_MODEL`), `output_config.effort=low` para que el razonamiento no agote el tope de 300 tokens, y respaldo del lado del servidor habilitado (`fallbacks: "default"`, encabezado beta `server-side-fallback-2026-07-01`). Una negativa del modelo, un estado no 2xx o un cuerpo inesperado → `503`. Sin `ANTHROPIC_API_KEY` responde `503` sin llamar a la red. Un proveedor desconocido hace fallar el arranque; las llamadas corren en un ejecutor acotado.
+19. `matterId` se resuelve con `MatterRepository.findById` (cualquier estado del asunto).
+20. En la UI, mientras se cargan los indicadores o si `GET /api/features` falla, el botón queda oculto; un `404 feature-disabled` vuelve a pedir los indicadores y el botón desaparece. El contador "N de 500 caracteres" cuenta code points después del recorte (supuesto 6). Una sugerencia pendiente se descarta cuando el formulario se reinicia tras guardar. `useFeatures()` no existía en el esquema (D10): se creó en `frontend/src/api/features.ts`.
+21. El perfil Maven `-Pevals` corre solo `DescriptionAssistantEvalsIT`, por lo que omite el umbral de JaCoCo; el `verify` normal conserva todos los gates (JaCoCo incluido) y también ejecuta las evals. `scripts/evals.mjs` falla si los casos no son exactamente 10. El job `evals` de CI instala Java 21 y sube `backend/target/evals/` como artefacto.
+
 ## Trazabilidad
 
 | Regla del brief                                                                                                       | Requisito (`specs/description-assistant/spec.md`)                                                                                                        | Escenario(s)                                                                                                                                                                                                     |

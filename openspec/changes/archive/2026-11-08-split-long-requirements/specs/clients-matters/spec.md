@@ -36,6 +36,29 @@ El sistema SHALL (DEBE) permitir a un usuario con rol `PARTNER` crear un asunto 
 - **THEN** (Entonces) la respuesta es `404` con `code` = `not-found`
 - **AND** no se crea ningún asunto
 
+### Requirement: Validación de datos del asunto
+
+El sistema SHALL (DEBE) rechazar con `400` y `code` = `validation-error` la creación de un asunto si falta `clientId`, si `title` falta o, tras recortar espacios, queda vacío o supera 200 caracteres, o si `description` supera 2000 caracteres. El sistema SHALL NOT (NO DEBE) crear el asunto en esos casos.
+
+#### Scenario: Título ausente y clientId ausente
+
+- **GIVEN** (Dado) un Socio autenticado
+- **WHEN** (Cuando) envía `POST /api/matters` con cuerpo `{}`
+- **THEN** (Entonces) la respuesta es `400` con `code` = `validation-error`
+- **AND** `errors[]` contiene `field` = `clientId` y `field` = `title`
+
+#### Scenario: Descripción de más de 2000 caracteres
+
+- **GIVEN** (Dado) un Socio autenticado y un cliente existente con id `C`
+- **WHEN** (Cuando) envía `POST /api/matters` con `clientId` = `C`, un `title` válido y una `description` de 2001 caracteres
+- **THEN** (Entonces) la respuesta es `400` con `code` = `validation-error` y `errors[]` contiene `field` = `description`
+
+#### Scenario: Título de más de 200 caracteres
+
+- **GIVEN** (Dado) un Socio autenticado y un cliente existente con id `C`
+- **WHEN** (Cuando) envía `POST /api/matters` con `clientId` = `C` y un `title` de 201 caracteres
+- **THEN** (Entonces) la respuesta es `400` con `code` = `validation-error` y `errors[]` contiene `field` = `title`
+
 ### Requirement: El Socio cierra asuntos
 
 El sistema SHALL (DEBE) permitir a un usuario `PARTNER` cerrar un asunto `OPEN` mediante `POST /api/matters/{matterId}/close`, respondiendo `200` con el asunto en `status` = `CLOSED` y `closedAt` igual al instante del cierre. El cierre SHALL NOT (NO DEBE) depender de la existencia ni del estado de registros de horas del asunto; en particular, SHALL (DEBE) permitirse aunque tenga registros de horas pendientes. Si el asunto no existe, SHALL (DEBE) responder `404` con `code` = `not-found`.

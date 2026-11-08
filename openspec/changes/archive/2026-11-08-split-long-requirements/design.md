@@ -34,7 +34,7 @@ Por orden de preferencia:
    - "Pantalla Tablero": el ejemplo de formato del período pasa al escenario "El socio abre el Tablero".
    - "Sugerencia de descripción para el Abogado": el detalle de `errors[]` con `field: matterId` queda solo en el escenario "matterId con formato inválido", que ya lo exigía.
 2. **Quitar lo que repite otro texto normativo**:
-   - "El Socio crea asuntos": los límites de `title` (1 a 200 tras recortar) y `description` (hasta 2000), que ya define "Validación de datos del asunto".
+   - "El Socio crea asuntos": los límites de `title` (1 a 200 tras recortar) y `description` (hasta 2000), que define "Validación de datos del asunto". Como esa redacción ("queda vacío tras recortar espacios o supera 200 caracteres") podía leerse como si el recorte aplicara solo al caso vacío, se la modifica a "si `title` falta o, tras recortar espacios, queda vacío o supera 200 caracteres" (revisión del PR #31). El backend ya recorta antes de validar, así que el comportamiento no cambia.
    - "El Abogado solo puede leer": la frase "Así, a un `LAWYER` se le responde `403` aunque el cuerpo sea inválido o el recurso no exista", que ya verifican los escenarios "Abogado cierra un asunto inexistente" y "Abogado envía un cuerpo inválido".
    - "La nota se trata solo como datos": el ejemplo de instrucción inyectada, que ya está en el escenario "Nota con instrucciones inyectadas".
    - "Campos controlados por el servidor": la frase inicial, que resume la siguiente (la que enumera los campos y exige ignorarlos en silencio).

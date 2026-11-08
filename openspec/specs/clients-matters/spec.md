@@ -214,7 +214,7 @@ El sistema SHALL (DEBE) permitir a un usuario con rol `PARTNER` crear un asunto 
 
 ### Requirement: Validación de datos del asunto
 
-El sistema SHALL (DEBE) rechazar con `400` y `code` = `validation-error` la creación de un asunto si falta `clientId`, si `title` falta, queda vacío tras recortar espacios o supera 200 caracteres, o si `description` supera 2000 caracteres. El sistema SHALL NOT (NO DEBE) crear el asunto en esos casos.
+El sistema SHALL (DEBE) rechazar con `400` y `code` = `validation-error` la creación de un asunto si falta `clientId`, si `title` falta o, tras recortar espacios, queda vacío o supera 200 caracteres, o si `description` supera 2000 caracteres. El sistema SHALL NOT (NO DEBE) crear el asunto en esos casos.
 
 #### Scenario: Título ausente y clientId ausente
 

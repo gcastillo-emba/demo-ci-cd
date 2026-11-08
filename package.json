@@ -1,0 +1,23 @@
+{
+  "name": "asuntos-horas",
+  "private": true,
+  "version": "0.0.0",
+  "description": "POC Asuntos & Horas — MADA-MB",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [],
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "spec:validate": "openspec validate --all --strict --no-interactive",
+    "hooks:test": "node --test \".claude/hooks/test/*.test.mjs\"",
+    "scripts:test": "node --test \"scripts/test/*.test.mjs\"",
+    "format:check": "prettier --check \"**/*.{md,json,yml,yaml,mjs}\"",
+    "gate": "node scripts/gate.mjs"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "1.12.0",
+    "prettier": "3.6.2"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules
+dist
+target
+coverage
+playwright-report
+test-results
+frontend/src/api/generated
+openspec/changes/archive
+CHANGELOG.md
+package-lock.json
+.claude/commands/opsx
+.claude/skills/openspec-*

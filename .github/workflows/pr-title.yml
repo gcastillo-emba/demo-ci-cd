@@ -1,0 +1,45 @@
+# Valida que el título del PR siga Conventional Commits (el repo solo permite squash merge,
+# así que el título es el mensaje del commit en main).
+# pull_request_target: no se hace checkout del código del PR; solo se lee el título.
+name: PR title
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  semantic-title:
+    name: semantic-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            chore
+            ci
+            refactor
+            test
+            build
+            perf
+          scopes: |
+            c1
+            c2
+            c3
+            c4
+            api
+            spec
+            ci
+            docs
+            deps
+            skeleton
+            release
+          requireScope: false

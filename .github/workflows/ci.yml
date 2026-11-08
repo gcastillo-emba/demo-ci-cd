@@ -1,0 +1,80 @@
+# CI mínimo (F0/F1). El pipeline completo (changes, contract, backend, frontend, evals, e2e)
+# se agrega en F3 sobre esta misma estructura: cada job nuevo se suma a `needs` de `ci-ok`.
+# Pendiente F3: fijar las acciones por SHA (hoy se usan tags mayores).
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  spec:
+    name: spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run spec:validate
+
+  tooling:
+    name: tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run hooks:test
+      - run: npm run scripts:test
+      - run: npm run format:check
+
+  # El plan exige gitleaks dentro del CI mínimo para que bloquee vía `ci-ok` (único check
+  # requerido). security.yml lo mantiene además para el escaneo semanal programado.
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ci-ok:
+    name: ci-ok
+    needs: [spec, tooling, gitleaks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verificar resultado de los jobs requeridos
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Al menos un job requerido falló o fue cancelado: ${{ toJSON(needs) }}"
+          exit 1
+      - name: Todo en verde
+        run: echo "ci-ok"

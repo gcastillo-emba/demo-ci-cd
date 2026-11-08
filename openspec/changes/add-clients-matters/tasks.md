@@ -1,9 +1,9 @@
 ## 1. Contrato
 
-- [ ] 1.1 Agregar a `api/openapi.yaml` los esquemas `Client`, `ClientCreate`, `Matter`, `MatterCreate`, `MatterStatus`, `ClientPage` y `MatterPage` (design D1); verificar con `npm run api:lint` sin errores.
-- [ ] 1.2 Agregar los 7 endpoints (`GET/POST /api/clients`, `GET /api/clients/{clientId}`, `GET/POST /api/matters`, `GET /api/matters/{matterId}`, `POST /api/matters/{matterId}/close`) con parámetros `page`, `size` (min/max), `q`, `clientId`, `status`, `security: bearerAuth` y respuestas 400/401/403/404/409 `application/problem+json`; verificar con `npm run api:lint` y revisando que cada `code` de la spec aparezca en la descripción de su respuesta.
-- [ ] 1.3 Regenerar el cliente (`npm run api:generate`) y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde.
-- [ ] 1.4 Verificar que el contrato genera las interfaces del backend con `./mvnw -q generate-sources` (las interfaces `ClientsApi` y `MattersApi` se generan sin errores; su implementación llega en 2.6).
+- [x] 1.1 Agregar a `api/openapi.yaml` los esquemas `Client`, `ClientCreate`, `Matter`, `MatterCreate`, `MatterStatus`, `ClientPage` y `MatterPage` (design D1); verificar con `npm run api:lint` sin errores.
+- [x] 1.2 Agregar los 7 endpoints (`GET/POST /api/clients`, `GET /api/clients/{clientId}`, `GET/POST /api/matters`, `GET /api/matters/{matterId}`, `POST /api/matters/{matterId}/close`) con parámetros `page`, `size` (min/max), `q`, `clientId`, `status`, `security: bearerAuth` y respuestas 400/401/403/404/409 `application/problem+json`; verificar con `npm run api:lint` y revisando que cada `code` de la spec aparezca en la descripción de su respuesta.
+- [x] 1.3 Regenerar el cliente (`npm run api:generate`) y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde.
+- [x] 1.4 Verificar que el contrato genera las interfaces del backend con `./mvnw -q generate-sources` (las interfaces `ClientsApi` y `MattersApi` se generan sin errores; su implementación llega en 2.6).
 
 ## 2. Backend
 

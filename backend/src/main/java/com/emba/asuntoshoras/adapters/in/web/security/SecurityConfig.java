@@ -27,7 +27,10 @@ public class SecurityConfig {
       ProblemAuthenticationEntryPoint entryPoint,
       ProblemAccessDeniedHandler accessDeniedHandler)
       throws Exception {
-    http.csrf(AbstractHttpConfigurer::disable)
+    // CSRF: la API /api/** es stateless (JWT en cabecera Authorization, sin cookies ni sesión), por
+    // lo que un navegador no adjunta credenciales automáticamente y CSRF no aplica. La protección
+    // queda ACTIVA para cualquier otra ruta que modifique estado (ADR-006).
+    http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
         .httpBasic(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
         .logout(AbstractHttpConfigurer::disable)

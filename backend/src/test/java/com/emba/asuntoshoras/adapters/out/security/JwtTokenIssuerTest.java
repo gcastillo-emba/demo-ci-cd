@@ -56,7 +56,7 @@ class JwtTokenIssuerTest {
     assertThat(jwt.getHeaders()).containsEntry("alg", "HS256");
     assertThat(jwt.getSubject()).isEqualTo(user.id().toString());
     assertThat(jwt.getClaimAsString("role")).isEqualTo("LAWYER");
-    assertThat(jwt.getClaimAsString("email")).isEqualTo("abogado1@asuntos.test");
+    assertThat(jwt.getClaims()).doesNotContainKey("email"); // ADR-006: sin PII en el token
     assertThat(jwt.getIssuedAt()).isEqualTo(NOW);
     assertThat(jwt.getExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(2)));
   }

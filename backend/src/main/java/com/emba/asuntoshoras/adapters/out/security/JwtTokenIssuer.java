@@ -11,10 +11,9 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
-/** Emite JWT HS256 con claims {@code sub} (userId), {@code email} y {@code role}. */
+/** Emite JWT HS256 con claims {@code sub} (userId) y {@code role}; sin PII (ADR-006). */
 public class JwtTokenIssuer implements TokenIssuer {
 
-  public static final String CLAIM_EMAIL = "email";
   public static final String CLAIM_ROLE = "role";
 
   private final JwtEncoder encoder;
@@ -33,7 +32,6 @@ public class JwtTokenIssuer implements TokenIssuer {
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
             .subject(user.id().toString())
-            .claim(CLAIM_EMAIL, user.email().value())
             .claim(CLAIM_ROLE, user.role().name())
             .issuedAt(issuedAt)
             .expiresAt(issuedAt.plus(ttl))

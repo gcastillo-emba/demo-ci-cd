@@ -2,6 +2,7 @@
 
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-07
+- **Revisado:** 2026-11-08 (PR #14): enmienda sin cambio de decisión. Restringe `claude-review.yml` por autor y documenta la desviación de F3 (el job `changes` no se implementó).
 - **Decisores:** humano + arquitecto (diseño de devops)
 - **Relacionado con:** ADR-002, ADR-004, ADR-005
 

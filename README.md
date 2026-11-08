@@ -99,17 +99,18 @@ Cada cambio recorre **Research → Plan → Implement → Verificar → Revisar 
 
 ## Documentación
 
-| Documento                                               | Qué contiene                                                                   |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [Plan maestro](docs/plan-maestro.md)                    | Fuente de verdad: alcance, arquitectura, CI/CD, fases y verificación.          |
-| [ADRs](docs/adr/README.md)                              | Decisiones de arquitectura (hexagonal, pruebas, CI/CD, merge, seguridad, JWT). |
-| [Arquitectura C4](docs/arquitectura/c4-contenedores.md) | Diagramas de contexto y contenedores.                                          |
-| [Glosario](docs/glosario.md)                            | Términos del dominio en español e inglés.                                      |
-| [Bitácora de fallas](docs/bitacora-fallas.md)           | Registro de fallas y lecciones.                                                |
-| [Resumen de la bitácora](docs/bitacora-resumen.md)      | Resumen ejecutivo generado en modo headless con `claude -p`.                   |
-| [Runbook de demo](docs/runbook.md)                      | Despliegue, verificación, release, rollback y solución de problemas.           |
-| Informe de la demo (`docs/informe-demo.md`)             | Matriz de capacidades de Claude Code: dónde se usó y resultado (en F6).        |
-| Métricas de la demo (`docs/metricas-demo.md`)           | PRs, corridas de CI y tiempos por fase (en F6).                                |
+| Documento                                                       | Qué contiene                                                                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [Plan maestro](docs/plan-maestro.md)                            | Fuente de verdad: alcance, arquitectura, CI/CD, fases y verificación.                                       |
+| [ADRs](docs/adr/README.md)                                      | Decisiones de arquitectura (hexagonal, pruebas, CI/CD, merge, seguridad, JWT).                              |
+| [Arquitectura C4](docs/arquitectura/c4-contenedores.md)         | Diagramas de contexto y contenedores.                                                                       |
+| [Glosario](docs/glosario.md)                                    | Términos del dominio en español e inglés.                                                                   |
+| [Bitácora de fallas](docs/bitacora-fallas.md)                   | Registro de fallas y lecciones.                                                                             |
+| [Resumen de la bitácora](docs/bitacora-resumen.md)              | Resumen ejecutivo generado en modo headless con `claude -p`.                                                |
+| [Runbook de demo](docs/runbook.md)                              | Despliegue, verificación, release, rollback y solución de problemas.                                        |
+| [Informe de la demo](docs/informe-demo.md)                      | Matriz de capacidades de Claude Code: dónde se usó, qué funcionó, qué falló y recomendación.                |
+| [Métricas de la demo](docs/metricas-demo.md)                    | PRs, corridas de CI, fallas de gates, intervenciones humanas, cobertura y tiempos (`scripts/metricas.mjs`). |
+| [Propuesta de mejora de MADA-MB](docs/propuesta-mejora-mada.md) | Gates redundantes y faltantes, reglas nuevas y plantillas reutilizables.                                    |
 
 ## Licencia
 

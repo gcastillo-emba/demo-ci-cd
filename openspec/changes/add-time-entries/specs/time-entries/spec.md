@@ -1,7 +1,3 @@
-## Purpose
-
-Permite que los abogados registren las horas trabajadas en asuntos abiertos y que los socios las aprueben o rechacen, aplicando las reglas de negocio de la firma (décimas de hora, límite diario de 24 h, fecha no futura en `America/La_Paz`, ventana de edición de 7 días y estados terminales).
-
 ## ADDED Requirements
 
 ### Requirement: Autenticación obligatoria en registros de horas
@@ -39,6 +35,26 @@ El sistema SHALL (DEBE) permitir que un usuario con rol `LAWYER` registre horas 
 - **GIVEN** (Dado) un abogado autenticado
 - **WHEN** (Cuando) registra horas con un `matterId` que no existe
 - **THEN** (Entonces) la respuesta es 404 con `code` = `not-found`
+
+### Requirement: Campos controlados por el servidor
+
+El sistema SHALL NOT (NO DEBE) aceptar del cliente los campos que controla el servidor. En `POST /api/time-entries` y en `PUT /api/time-entries/{id}`, los campos `id`, `lawyerId`, `lawyerName`, `matterCode`, `status`, `rejectionReason`, `createdAt` y `editableUntil` enviados en el cuerpo SHALL (DEBEN) ignorarse en silencio: el registro SHALL (DEBE) pertenecer siempre al abogado autenticado, nacer y seguir en estado `PENDING` tras una edición, sin `rejectionReason`, y con `createdAt` fijado por el servidor con su `Clock`.
+
+#### Scenario: Alta con campos de solo lectura
+
+- **GIVEN** (Dado) un abogado A autenticado, otro abogado B y un asunto `OPEN`
+- **AND** hoy es 2026-11-07 en `America/La_Paz`
+- **WHEN** (Cuando) A envía `POST /api/time-entries` con datos válidos más `lawyerId` = B, `status` = `APPROVED`, `rejectionReason` = "x" y `createdAt` = 2026-01-01T00:00:00Z
+- **THEN** (Entonces) la respuesta es 201
+- **AND** el registro devuelto tiene `lawyerId` = A, `status` = `PENDING`, sin `rejectionReason` y `createdAt` del 2026-11-07 en `America/La_Paz`
+- **AND** B no tiene ningún registro nuevo
+
+#### Scenario: Edición con campos de solo lectura
+
+- **GIVEN** (Dado) un registro `PENDING` editable del abogado A con `version` vigente
+- **WHEN** (Cuando) A envía `PUT /api/time-entries/{id}` con datos válidos, la `version` vigente y además `lawyerId` de otro abogado, `status` = `APPROVED` y `createdAt` = 2026-01-01T00:00:00Z
+- **THEN** (Entonces) la respuesta es 200
+- **AND** el registro sigue con `lawyerId` = A, `status` = `PENDING` y su `createdAt` y `editableUntil` originales
 
 ### Requirement: Validación de formato del registro
 

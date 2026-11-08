@@ -40,7 +40,7 @@ El controller recibe `from`/`to` como `LocalDate` (el formato inválido lo recha
 
 ### D3. Alcance por rol en `application.service`
 
-`DashboardQueryService` (puerto `in` `GetDashboardSummary`) recibe el usuario autenticado (id + rol) y construye un `DashboardScope`: `ALL` para `PARTNER`, `OWN(lawyerId)` para `LAWYER`. El puerto `out` `DashboardReadRepository.aggregate(DateWindow, DashboardScope)` recibe el alcance ya resuelto; el adaptador nunca decide permisos. Los parámetros de consulta desconocidos (p. ej. `lawyerId`) no existen en el contrato y se ignoran.
+`DashboardQueryService` (puerto `in` `GetDashboardSummary`) recibe el usuario autenticado (id + rol) y construye un `DashboardScope`: `ALL` para `PARTNER`, `OWN(lawyerId)` para `LAWYER`. El puerto `out` `DashboardReadRepository.aggregate(DateWindow, DashboardScope)` recibe el alcance ya resuelto; el adaptador nunca decide permisos. Con alcance `OWN`, si la consulta por abogado no devuelve fila (el abogado no tiene horas contadas en la ventana), el servicio agrega la fila propia con `approvedHours` = 0 y `pendingHours` = 0, con el `lawyerName` del usuario autenticado (Supuesto 1); así un `LAWYER` recibe siempre exactamente una fila en `byLawyer`. Los parámetros de consulta desconocidos (p. ej. `lawyerId`) no existen en el contrato y se ignoran.
 
 - Alternativa: filtrar en el controller o en la consulta según el token. Descartada: la regla quedaría fuera de JaCoCo y duplicada.
 
@@ -59,7 +59,7 @@ El adaptador de persistencia ejecuta dos consultas nativas (o JPQL con proyeccio
 
 - Ruta `/tablero`, enlace "Tablero" en la navegación para ambos roles. Llama a `GET /api/dashboard/summary` **sin** `from`/`to` (la ventana fija la decide el servidor y se muestra con los `from`/`to` de la respuesta en formato `dd/mm/aaaa`).
 - Componente `HoursTable` reutilizado para ambas tablas: `<table>` con `<caption>`, `<th scope="col">` (Asunto/Abogado, Aprobadas, Pendientes, Distribución) y `<th scope="row">` por fila.
-- Componente `HoursBar`: dos `<span>` con `width` en porcentaje relativo al máximo `approved+pending` de la tabla; segmento aprobado sólido y pendiente con patrón rayado (`repeating-linear-gradient`) además de colores distintos con contraste AA; texto visible "Aprobadas: X h · Pendientes: Y h". La barra lleva `aria-hidden="true"` porque los valores ya están en celdas de texto.
+- Componente `HoursBar`: dos `<span>` con `width` en porcentaje relativo al máximo `approved+pending` de la tabla (si ese máximo es 0, como en la fila propia en cero de un abogado sin horas, ambos segmentos tienen ancho 0 y queda solo el texto); segmento aprobado sólido y pendiente con patrón rayado (`repeating-linear-gradient`) además de colores distintos con contraste AA; texto visible "Aprobadas: X h · Pendientes: Y h". La barra lleva `aria-hidden="true"` porque los valores ya están en celdas de texto.
 - Formato de horas con `Intl.NumberFormat('es-BO', { maximumFractionDigits: 1 })` → "3,5 h", "4 h", "0 h".
 - Estados: carga (texto "Cargando tablero…" con `aria-busy`), vacío (mensaje de la spec), error (`role="alert"`), `401` → manejador global del skeleton que redirige al login.
 
@@ -84,8 +84,8 @@ Sin migraciones de esquema obligatorias. Despliegue con la imagen normal de CD; 
 
 ## Supuestos
 
-1. **Abogado sin horas en la ventana (pendiente de confirmación):** `byLawyer` es una lista vacía (prevalece la regla de período vacío); "exactamente una fila" del brief aplica cuando el abogado tiene horas contadas. Es una reinterpretación del brief: la confirma el dueño del plan antes de implementar (tarea 1.0) y se registra en `docs/glosario.md` (tarea 5.1). Si se rechaza, la alternativa es devolver una fila propia con ceros, lo que cambia los requisitos "Alcance del abogado" y "Período sin horas". Anotado en la spec, requisito "Alcance del abogado", y en `proposal.md`, "Decisiones pendientes de confirmación".
-2. **Solo aparecen filas con horas contadas:** asuntos y abogados sin registros `APPROVED`/`PENDING` en la ventana no aparecen (no se rellenan con ceros), incluidos asuntos `OPEN` sin horas.
+1. **Abogado sin horas en la ventana (decidido):** el `byLawyer` de un `LAWYER` tiene siempre exactamente una fila, la suya, tal como dice el brief ("exactamente una fila: él mismo"); si no tiene horas contadas en la ventana, la fila va con `approvedHours` = 0.0 y `pendingHours` = 0.0, mientras `byMatter` queda vacío y los totales en cero. La regla "período sin horas → listas vacías" aplica a `byMatter` y, para el `PARTNER`, también a `byLawyer`. Es reversible (cambia una fila en la respuesta, no el contrato) y se registra en `docs/glosario.md` (tarea 5.1). Recogido en la spec, requisitos "Alcance del abogado", "Período sin horas" y "Estado vacío del Tablero".
+2. **Solo aparecen filas con horas contadas:** asuntos y abogados sin registros `APPROVED`/`PENDING` en la ventana no aparecen (no se rellenan con ceros), incluidos asuntos `OPEN` sin horas. Única excepción: la fila propia del `LAWYER` (Supuesto 1).
 3. **Asuntos cerrados:** un asunto `CLOSED` con horas en la ventana sí aparece; el estado del asunto no filtra.
 4. **Fecha de referencia:** la ventana filtra por `workDate` (fecha de trabajo), no por la fecha de creación ni de aprobación.
 5. **`from` y `to` van juntos:** enviar solo uno es `400 validation-error`; no se completa el otro con un valor por defecto.

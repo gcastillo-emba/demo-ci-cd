@@ -19,6 +19,8 @@
 - [ ] 2.10 IT HTTP de Problem Details para cada slug de C2 (status, `code`, `type`, `detail` en español, `traceId`, extensión del límite diario); verificar con `./mvnw verify`
 - [ ] 2.11 Seed `R__demo_time_entries.sql` idempotente con fechas relativas y perfil `demo`; verificar arrancando compose dos veces sin errores ni duplicados
 - [ ] 2.12 IT de interacción con C1: cerrar un asunto con registros `PENDING` → `200` y `status` `CLOSED`, los registros siguen `PENDING` y el socio puede aprobarlos (design Supuesto 13); verificar con `./mvnw verify` en verde
+- [ ] 2.13 Reglas por URL en `SecurityFilterChain` (`POST /api/time-entries` y `PUT /api/time-entries/*` → `LAWYER`; `POST /api/time-entries/*/approve` y `POST /api/time-entries/*/reject` → `PARTNER`) más IT de precedencia (design D5): socio con cuerpo inválido en `POST`/`PUT` → 403 `forbidden` (no 400); abogado que aprueba un registro inexistente → 403 (no 404); abogado que rechaza sin motivo → 403 (no 422); abogado B que edita un registro ajeno con cuerpo inválido → 400 (no 403 `not-entry-owner`); registro ajeno inexistente → 404 (no 403 `not-entry-owner`); verificar con `./mvnw verify` en verde
+- [ ] 2.14 IT de campos controlados por el servidor (mass assignment): `POST` y `PUT` con `lawyerId` ajeno, `status`, `rejectionReason` y `createdAt` en el cuerpo → el registro pertenece al abogado autenticado, sigue `PENDING`, sin motivo y con `createdAt` del servidor; verificar con `./mvnw verify` en verde
 
 ## 3. Frontend
 
@@ -41,4 +43,4 @@
 - [ ] 5.1 Actualizar `docs/glosario.md` y la sección Supuestos de `design.md` con lo surgido en la implementación; verificar con `npm run spec:validate` en verde
 - [ ] 5.2 Registrar las fallas del ciclo en `docs/bitacora-fallas.md`; verificar que cada gate fallido tiene su fila
 - [ ] 5.3 Obtener `revisor:aprobado` y `seguridad:ok` posteriores al último commit; verificar con `gh pr view --json labels`
-- [ ] 5.4 Ejecutar `openspec archive add-time-entries` como último commit del PR de la feature; verificar que `openspec/specs/time-entries/spec.md` existe y que `openspec validate --all --strict --no-interactive` pasa
+- [ ] 5.4 Como último commit del PR de la capacidad, ejecutar `openspec archive add-time-entries` (crea `openspec/specs/time-entries/spec.md`) y, en el mismo commit, reemplazar su `## Purpose` provisional por el texto de `proposal.md` § Propósito de la capacidad; verificar con `openspec validate --all --strict --no-interactive` en verde y que el cambio aparece en `openspec/changes/archive/`

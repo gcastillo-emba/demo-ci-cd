@@ -7,7 +7,8 @@ Los abogados cargan descripciones de horas breves e informales ("llamada cliente
 - Nuevo endpoint `POST /api/assistant/description-suggestions` con cuerpo `{ note, matterId? }` que devuelve `{ suggestion, provider }`. Solo rol `LAWYER`; cualquier otro rol recibe `403 forbidden`.
 - Nuevo indicador de funcionalidad `description-assistant`, expuesto en `GET /api/features`: apagado en el perfil de producción y encendido en el perfil `demo` (supuesto). Con el indicador apagado el endpoint responde `404 feature-disabled` y la UI oculta el botón.
 - Guardrails de entrada: la nota se recorta (trim); vacía → `400 validation-error` con error de campo `assistant-note-empty`; más de 500 caracteres → `400 validation-error` con `assistant-note-too-long`.
-- Guardrails de salida: la sugerencia nunca es vacía y tiene como máximo 300 caracteres (se trunca en límite de palabra si el proveedor devuelve más).
+- Guardrails de salida: la sugerencia nunca es vacía y tiene como máximo 300 caracteres (se trunca en límite de palabra si el proveedor devuelve más); correos y teléfonos se reemplazan por `[correo]` / `[teléfono]` en la capa de aplicación, para ambos adaptadores.
+- Seguridad del prompt: la nota se trata solo como datos (delimitada y escapada); instrucciones inyectadas en la nota no cambian la tarea. Correos y teléfonos de la nota se redactan antes de enviarla al proveedor externo. La UI muestra la sugerencia como texto plano (sin HTML ni Markdown).
 - Disponibilidad: si el proveedor no responde dentro del tiempo límite (8 s), el endpoint responde `503 assistant-unavailable` con mensaje en español.
 - Privacidad: el texto de la nota y de la sugerencia nunca se escribe en logs; solo longitudes, proveedor y latencia.
 - Humano en el circuito: el endpoint **nunca** persiste la sugerencia. En el formulario "Registrar horas" se agrega el botón "Sugerir descripción" con las acciones Aceptar, Editar y Descartar; el registro solo se guarda cuando el abogado envía el formulario.
@@ -31,3 +32,11 @@ Los abogados cargan descripciones de horas breves e informales ("llamada cliente
 - **Evals y CI**: `evals/description-assistant/cases/` (10 casos), job `evals` bloqueante en `ci.yml`, workflow manual `evals-real.yml` (inerte sin `ANTHROPIC_API_KEY`).
 - **Dependencias**: ninguna nueva; el adaptador real usa `java.net.http` del JDK.
 - **Depende de**: walking skeleton (F3: auth, `/api/features`, Problem Details) y `add-time-entries` (C2: formulario "Registrar horas").
+
+## Propósito de la capacidad
+
+Texto del `## Purpose` de `openspec/specs/description-assistant/spec.md`. La spec delta solo contiene operaciones. Al archivar, `openspec archive` crea la spec principal con un Purpose provisional, y en el mismo commit se reemplaza por este texto (ver tarea 5.4):
+
+> Permitir que un Abogado obtenga, a partir de una nota informal, una sugerencia de descripción profesional en español para un registro de horas, detrás de un indicador de funcionalidad, con guardrails verificables, sin PII en logs ni hacia el proveedor externo, y con el humano siempre decidiendo qué se guarda.
+
+La trazabilidad regla del brief → requisito → escenario está en `design.md` § Trazabilidad.

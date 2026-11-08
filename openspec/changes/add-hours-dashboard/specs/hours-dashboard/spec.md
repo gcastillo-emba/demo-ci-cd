@@ -126,7 +126,7 @@ La respuesta SHALL (DEBE) incluir `byMatter`, una lista con una fila por asunto 
 
 ### Requirement: Horas agregadas por abogado
 
-La respuesta SHALL (DEBE) incluir `byLawyer`, una lista con una fila por abogado que tenga al menos un registro contado en la ventana, con `lawyerId`, `lawyerName`, `approvedHours` y `pendingHours`, con el mismo formato decimal que `byMatter`. La lista SHALL (DEBE) ordenarse por `lawyerName` ascendente.
+La respuesta SHALL (DEBE) incluir `byLawyer`, una lista con una fila por abogado que tenga al menos un registro contado en la ventana (salvo la fila propia del `LAWYER`, que aparece siempre; ver "Alcance del abogado"), con `lawyerId`, `lawyerName`, `approvedHours` y `pendingHours`, con el mismo formato decimal que `byMatter`. La lista SHALL (DEBE) ordenarse por `lawyerName` ascendente.
 
 #### Scenario: Suma por abogado
 
@@ -149,7 +149,7 @@ La respuesta SHALL (DEBE) incluir `totals` con `approvedHours` y `pendingHours`,
 
 ### Requirement: Exclusión de registros rechazados
 
-El sistema SHALL NOT (NO DEBE) contar registros en estado `REJECTED` en `byMatter`, `byLawyer` ni `totals`. Un asunto o abogado cuyos únicos registros en la ventana estén rechazados SHALL NOT (NO DEBE) aparecer como fila.
+El sistema SHALL NOT (NO DEBE) contar registros en estado `REJECTED` en `byMatter`, `byLawyer` ni `totals`. Un asunto o abogado cuyos únicos registros en la ventana estén rechazados SHALL NOT (NO DEBE) aparecer como fila, salvo la fila propia de un `LAWYER`, que aparece con horas en cero (ver "Alcance del abogado").
 
 #### Scenario: Registro rechazado no suma
 
@@ -170,7 +170,7 @@ Para un usuario con rol `PARTNER`, el sistema SHALL (DEBE) agregar los registros
 
 ### Requirement: Alcance del abogado
 
-Para un usuario con rol `LAWYER`, el sistema SHALL (DEBE) agregar únicamente los registros de los que es autor. `byLawyer` SHALL (DEBE) contener a lo sumo una fila, la del propio abogado, y exactamente una cuando tiene horas contadas en la ventana (decisión pendiente de confirmación del dueño del plan; ver `design.md`, Supuesto 1). `byMatter` y `totals` SHALL (DEBE) reflejar solo sus horas. El sistema SHALL NOT (NO DEBE) exponer filas, nombres ni horas de otros abogados, ni asuntos en los que solo otros abogados registraron horas.
+Para un usuario con rol `LAWYER`, el sistema SHALL (DEBE) agregar únicamente los registros de los que es autor. `byLawyer` SHALL (DEBE) contener siempre exactamente una fila, la del propio abogado, también cuando no tiene horas contadas en la ventana; en ese caso la fila tiene `approvedHours` = 0.0 y `pendingHours` = 0.0 (ver `design.md`, Supuesto 1). `byMatter` y `totals` SHALL (DEBE) reflejar solo sus horas. El sistema SHALL NOT (NO DEBE) exponer filas, nombres ni horas de otros abogados, ni asuntos en los que solo otros abogados registraron horas.
 
 #### Scenario: El abogado solo ve sus horas
 
@@ -190,7 +190,7 @@ Para un usuario con rol `LAWYER`, el sistema SHALL (DEBE) agregar únicamente lo
 
 ### Requirement: Período sin horas
 
-Cuando no hay registros contados en la ventana dentro del alcance del usuario, el sistema SHALL (DEBE) responder `200` con `byMatter` y `byLawyer` como listas vacías y `totals.approvedHours` = 0.0 y `totals.pendingHours` = 0.0. El sistema SHALL NOT (NO DEBE) responder `404` por un período vacío.
+Cuando no hay registros contados en la ventana dentro del alcance del usuario, el sistema SHALL (DEBE) responder `200` con `byMatter` como lista vacía y `totals.approvedHours` = 0.0 y `totals.pendingHours` = 0.0. Para un `PARTNER`, `byLawyer` SHALL (DEBE) ser una lista vacía; para un `LAWYER`, `byLawyer` SHALL (DEBE) contener solo su propia fila con horas en cero (requisito "Alcance del abogado"). El sistema SHALL NOT (NO DEBE) responder `404` por un período vacío.
 
 #### Scenario: Ventana sin registros para el socio
 
@@ -202,7 +202,9 @@ Cuando no hay registros contados en la ventana dentro del alcance del usuario, e
 
 - **GIVEN** (Dado) que otros abogados tienen registros en la ventana pero la abogada "Ana Pérez" no tiene ninguno contado
 - **WHEN** (Cuando) "Ana Pérez" (rol `LAWYER`) solicita el resumen
-- **THEN** (Entonces) el sistema responde `200` con `byMatter` = `[]`, `byLawyer` = `[]` y totales en cero
+- **THEN** (Entonces) el sistema responde `200` con `byMatter` = `[]` y totales en cero
+- **AND** `byLawyer` tiene exactamente una fila, la de "Ana Pérez", con `approvedHours` = 0.0 y `pendingHours` = 0.0
+- **AND** la respuesta no contiene nombres ni horas de otros abogados
 
 ### Requirement: Pantalla Tablero
 
@@ -272,11 +274,18 @@ Cada fila de ambas tablas SHALL (DEBE) incluir una barra horizontal hecha con CS
 
 ### Requirement: Estado vacío del Tablero
 
-Cuando el resumen no tiene horas en el período, la pantalla "Tablero" SHALL (DEBE) mostrar el mensaje "No hay horas registradas en los últimos 30 días." y los totales en cero, y SHALL NOT (NO DEBE) mostrar tablas vacías sin explicación.
+Cuando el resumen no tiene horas en el período (totales en cero), la pantalla "Tablero" SHALL (DEBE) mostrar el mensaje "No hay horas registradas en los últimos 30 días." y los totales en cero, y SHALL NOT (NO DEBE) mostrar tablas vacías sin explicación. Para un `LAWYER`, la fila propia en cero de `byLawyer` SHALL (DEBE) mostrarse junto al mensaje.
 
 #### Scenario: Tablero sin datos
 
-- **GIVEN** (Dado) que el resumen devuelve listas vacías y totales en cero
+- **GIVEN** (Dado) que el resumen devuelve `byMatter` vacío y totales en cero
 - **WHEN** (Cuando) el usuario abre "Tablero"
 - **THEN** (Entonces) ve "No hay horas registradas en los últimos 30 días."
 - **AND** ve "Aprobadas: 0 h" y "Pendientes: 0 h"
+
+#### Scenario: Abogado sin horas en el Tablero
+
+- **GIVEN** (Dado) un abogado autenticado sin horas contadas en los últimos 30 días
+- **WHEN** (Cuando) abre "Tablero"
+- **THEN** (Entonces) ve "No hay horas registradas en los últimos 30 días."
+- **AND** la tabla "Horas por abogado" muestra una sola fila con su nombre y "Aprobadas: 0 h", "Pendientes: 0 h"

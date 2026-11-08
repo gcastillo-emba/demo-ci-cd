@@ -34,3 +34,11 @@ La firma necesita que cada abogado registre las horas trabajadas en los asuntos 
 - **Frontend**: rutas y pantallas "Registrar horas", "Mis registros", "Aprobaciones"; navegación por rol.
 - **QA**: unit con `Clock.fixed` en `America/La_Paz`, IT con Testcontainers (incluido el de concurrencia), E2E de edición, límite diario y aprobar/rechazar; evidencia en `docs/evidence/add-time-entries/`.
 - **Dependencias**: requiere el walking skeleton (F3: login, `/api/me`, Problem Details, `Clock`) y C1 (`add-clients-matters`: asuntos y su estado `OPEN`/`CLOSED`).
+
+## Propósito de la capacidad
+
+Texto del `## Purpose` de `openspec/specs/time-entries/spec.md`. La spec delta solo contiene operaciones. Al archivar, `openspec archive` crea la spec principal con un Purpose provisional, y en el mismo commit se reemplaza por este texto (ver tarea 5.4):
+
+> Permitir que los abogados registren las horas trabajadas en asuntos abiertos y que los socios las aprueben o rechacen, aplicando las reglas de negocio de la firma (décimas de hora, límite diario de 24 h, fecha no futura en `America/La_Paz`, ventana de edición de 7 días y estados terminales).
+
+La trazabilidad regla del brief → requisito → escenario está en `design.md` § Trazabilidad.

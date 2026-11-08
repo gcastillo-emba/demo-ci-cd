@@ -30,14 +30,26 @@ El sistema SHALL (DEBE) responder todo error de esta capacidad con `Content-Type
 - **AND** el cuerpo contiene `title`, `status` = 400, `detail` en español, `code` = `validation-error` y un `traceId` no vacío
 - **AND** `errors[]` contiene un elemento con `field` = `name`
 
+### Requirement: Errores sin detalles internos
+
+Las respuestas Problem Details de toda la API `/api` SHALL NOT (NO DEBEN) incluir trazas de pila (_stack traces_), nombres de clases de excepción, sentencias SQL ni mensajes internos de librerías o de la base de datos. Un error inesperado (sin entrada en `ProblemCatalog`) SHALL (DEBE) responder `500` con `code` = `internal-error`, un `detail` genérico en español que no revele la causa y el `traceId` para correlacionarlo con los logs. Este comportamiento es compartido: C2–C4 lo heredan sin redeclararlo.
+
+#### Scenario: Error inesperado de persistencia
+
+- **GIVEN** (Dado) un Socio autenticado y una falla inesperada de la base de datos al crear un cliente
+- **WHEN** (Cuando) envía `POST /api/clients` con un cuerpo válido
+- **THEN** (Entonces) la respuesta es `500` con `Content-Type: application/problem+json`, `code` = `internal-error`, `type` = `https://asuntos-horas.example/problems/internal-error` y un `traceId` no vacío
+- **AND** `detail` es un texto genérico en español
+- **AND** el cuerpo no contiene trazas de pila, nombres de clases Java (p. ej. `SQLException`), texto SQL ni el mensaje original de la excepción
+
 ### Requirement: El Socio crea clientes
 
 El sistema SHALL (DEBE) permitir a un usuario con rol `PARTNER` crear un cliente mediante `POST /api/clients` con `name` obligatorio (1 a 200 caracteres tras recortar espacios) y `taxId` opcional. La respuesta exitosa SHALL (DEBE) ser `201` con el cliente creado (`id`, `name`, `taxId`, `createdAt`) y la cabecera `Location` apuntando a `/api/clients/{clientId}`.
 
 #### Scenario: Alta de cliente con identificación tributaria
 
-- **GIVEN** (Dado) un Socio autenticado y ningún cliente con `taxId` = `900100200`
-- **WHEN** (Cuando) envía `POST /api/clients` con `name` = `Inversiones Andinas S.A.` y `taxId` = `900100200`
+- **GIVEN** (Dado) un Socio autenticado y ningún cliente con `taxId` = `0000000001`
+- **WHEN** (Cuando) envía `POST /api/clients` con `name` = `Inversiones Andinas S.A.` y `taxId` = `0000000001`
 - **THEN** (Entonces) la respuesta es `201` con el cliente creado y un `id` asignado
 - **AND** la cabecera `Location` es `/api/clients/{id}`
 
@@ -91,8 +103,8 @@ El sistema SHALL (DEBE) garantizar que no existan dos clientes con el mismo `tax
 
 #### Scenario: taxId duplicado
 
-- **GIVEN** (Dado) un cliente existente con `taxId` = `900100200`
-- **WHEN** (Cuando) un Socio envía `POST /api/clients` con otro `name` y `taxId` = `900100200`
+- **GIVEN** (Dado) un cliente existente con `taxId` = `0000000001`
+- **WHEN** (Cuando) un Socio envía `POST /api/clients` con otro `name` y `taxId` = `0000000001`
 - **THEN** (Entonces) la respuesta es `409` con `code` = `client-tax-id-taken`
 - **AND** el número total de clientes no cambia
 
@@ -326,7 +338,7 @@ El sistema SHALL (DEBE) responder `409` con `code` = `matter-already-closed` al 
 
 ### Requirement: Un asunto cerrado no se reabre
 
-El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la interfaz, que devuelva un asunto `CLOSED` al estado `OPEN` ni que modifique un asunto existente. Una petición autenticada a `/api/matters/{matterId}` o `/api/clients/{clientId}` con un método no ofrecido (`PUT`, `PATCH`, `DELETE`) SHALL (DEBE) responder `405` con Problem Details `code` = `method-not-allowed`, y el recurso SHALL (DEBE) permanecer sin cambios.
+El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la interfaz, que devuelva un asunto `CLOSED` al estado `OPEN` ni que modifique un asunto existente. Una petición autenticada a `/api/matters/{matterId}` o `/api/clients/{clientId}` con un método no ofrecido (`PUT`, `PATCH`, `DELETE`) SHALL (DEBE) responder `405` con Problem Details `code` = `method-not-allowed`, cualquiera sea el rol (también un `LAWYER`), y el recurso SHALL (DEBE) permanecer sin cambios. La resolución del método precede a la autorización por rol porque no existe ninguna ruta para ese método, así que la precedencia `403 > 400` no aplica a estas peticiones.
 
 #### Scenario: Intento de reabrir con PATCH
 
@@ -334,6 +346,13 @@ El sistema SHALL NOT (NO DEBE) ofrecer ninguna operación, en la API ni en la in
 - **WHEN** (Cuando) un Socio envía `PATCH /api/matters/M` con `status` = `OPEN`
 - **THEN** (Entonces) la respuesta es `405` con `Content-Type: application/problem+json` y `code` = `method-not-allowed`
 - **AND** un `GET /api/matters/M` posterior devuelve `status` = `CLOSED`
+
+#### Scenario: Abogado envía un método no ofrecido
+
+- **GIVEN** (Dado) un Abogado autenticado y un asunto con id `M`
+- **WHEN** (Cuando) envía `PATCH /api/matters/M`, `PUT /api/matters/M` o `DELETE /api/matters/M`
+- **THEN** (Entonces) la respuesta es `405` con `code` = `method-not-allowed` (no `403`)
+- **AND** el asunto permanece sin cambios
 
 #### Scenario: La interfaz no ofrece reabrir
 
@@ -447,8 +466,8 @@ La interfaz SHALL (DEBE) mostrar al Socio los formularios **Nuevo cliente** (nom
 
 #### Scenario: Identificación tributaria duplicada en el formulario
 
-- **GIVEN** (Dado) un cliente existente con `taxId` = `900100200` y un Socio con el formulario **Nuevo cliente** abierto
-- **WHEN** (Cuando) guarda con `taxId` = `900100200`
+- **GIVEN** (Dado) un cliente existente con `taxId` = `0000000001` y un Socio con el formulario **Nuevo cliente** abierto
+- **WHEN** (Cuando) guarda con `taxId` = `0000000001`
 - **THEN** (Entonces) el formulario sigue abierto y muestra un mensaje de identificación tributaria ya registrada junto a ese campo
 
 #### Scenario: Abogado no ve formularios de alta

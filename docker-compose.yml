@@ -12,7 +12,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-asuntos}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-asuntos-dev}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      # Solo loopback: la base no queda expuesta en la red local.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -32,9 +33,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-asuntos}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-asuntos}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-asuntos-dev}
-      APP_JWT_SECRET: ${APP_JWT_SECRET:-solo-demo-no-usar-en-produccion-0123456789abcdef}
+      # Sin valor: se pasa APP_JWT_SECRET del entorno solo si está definido. El secreto FALSO de
+      # demo vive en un único lugar, application-demo.yml (perfil demo); ADR-006.
+      APP_JWT_SECRET:
     ports:
-      - '${BACKEND_PORT:-8081}:8081'
+      # Solo loopback: desde fuera se entra por nginx (8080), que aplica cabeceras y rate limiting.
+      - '127.0.0.1:${BACKEND_PORT:-8081}:8081'
     depends_on:
       postgres:
         condition: service_healthy

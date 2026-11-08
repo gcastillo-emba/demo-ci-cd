@@ -6,6 +6,7 @@ import {
   NETWORK_ERROR_DETAIL,
   problemFromResponse,
   toApiProblem,
+  TOO_MANY_REQUESTS_DETAIL,
 } from './problem';
 
 const invalidCredentials = {
@@ -15,6 +16,16 @@ const invalidCredentials = {
   detail: 'El email o la contraseña no son correctos.',
   code: 'invalid-credentials',
   traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+};
+
+// Cuerpo exacto que devuelve frontend/nginx.conf (location @too_many_requests).
+const tooManyRequests = {
+  type: 'https://asuntos-horas.example/problems/too-many-requests',
+  title: 'Demasiados intentos',
+  status: 429,
+  detail: 'Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.',
+  code: 'too-many-requests',
+  traceId: '',
 };
 
 describe('ApiProblem', () => {
@@ -75,6 +86,34 @@ describe('ApiProblem', () => {
     expect(problem.status).toBe(400);
     expect(problem.code).toBe('unknown-error');
     expect(problem.detail).toBe(GENERIC_ERROR_DETAIL);
+  });
+
+  it('parsea el 429 problem+json del rate limiting de nginx (traceId vacío)', async () => {
+    const response = new Response(JSON.stringify(tooManyRequests), {
+      status: 429,
+      headers: { 'Content-Type': 'application/problem+json; charset=utf-8', 'Retry-After': '60' },
+    });
+
+    const problem = await problemFromResponse(response);
+
+    expect(problem.status).toBe(429);
+    expect(problem.code).toBe('too-many-requests');
+    expect(problem.detail).toBe(TOO_MANY_REQUESTS_DETAIL);
+    expect(problem.traceId).toBeUndefined();
+    expect(errorMessage(problem)).toBe(TOO_MANY_REQUESTS_DETAIL);
+  });
+
+  it('un 429 sin cuerpo problem+json muestra igualmente el mensaje en español', async () => {
+    const response = new Response('<html>429 Too Many Requests</html>', {
+      status: 429,
+      headers: { 'Content-Type': 'text/html' },
+    });
+
+    const problem = await problemFromResponse(response);
+
+    expect(problem.code).toBe('too-many-requests');
+    expect(problem.title).toBe('Demasiados intentos');
+    expect(problem.detail).toBe(TOO_MANY_REQUESTS_DETAIL);
   });
 
   it('errorMessage traduce cualquier error a un mensaje en español', () => {

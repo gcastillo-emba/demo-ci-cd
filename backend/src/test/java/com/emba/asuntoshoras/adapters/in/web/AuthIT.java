@@ -10,9 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.emba.asuntoshoras.AbstractIT;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,6 +31,7 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.test.web.servlet.MvcResult;
 
 @ExtendWith(OutputCaptureExtension.class)
@@ -171,6 +176,87 @@ class AuthIT extends AbstractIT {
     mvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + expired))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("unauthenticated"));
+  }
+
+  @Test
+  void passwordLongerThan72BytesIs401InvalidCredentialsNot500() throws Exception {
+    mvc.perform(
+            post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody(PARTNER_EMAIL, "A".repeat(100))))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.code").value("invalid-credentials"));
+  }
+
+  @Test
+  void tokenWithoutExpIs401() throws Exception {
+    JwtClaimsSet claims =
+        JwtClaimsSet.builder()
+            .subject(PARTNER_ID)
+            .claim("role", "PARTNER")
+            .issuedAt(clock.instant())
+            .build();
+    String eternal =
+        jwtEncoder
+            .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+            .getTokenValue();
+
+    mvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + eternal))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.code").value("unauthenticated"));
+  }
+
+  @Test
+  void unsignedAlgNoneTokenIs401() throws Exception {
+    long now = clock.instant().getEpochSecond();
+    String header = base64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}");
+    String payload =
+        base64Url(
+            "{\"sub\":\""
+                + PARTNER_ID
+                + "\",\"role\":\"PARTNER\",\"iat\":"
+                + now
+                + ",\"exp\":"
+                + (now + 3600)
+                + "}");
+    String unsigned = header + "." + payload + ".";
+
+    mvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + unsigned))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("unauthenticated"));
+  }
+
+  @Test
+  void tokenSignedWithAnotherKeyIs401() throws Exception {
+    SecretKeySpec otherKey =
+        new SecretKeySpec(
+            "otra-llave-de-prueba-falsa-de-32-bytes-o-mas".getBytes(StandardCharsets.UTF_8),
+            "HmacSHA256");
+    JwtEncoder otherEncoder = new NimbusJwtEncoder(new ImmutableSecret<>(otherKey));
+    Instant issuedAt = clock.instant();
+    JwtClaimsSet claims =
+        JwtClaimsSet.builder()
+            .subject(PARTNER_ID)
+            .claim("role", "PARTNER")
+            .issuedAt(issuedAt)
+            .expiresAt(issuedAt.plus(Duration.ofHours(2)))
+            .build();
+    String forged =
+        otherEncoder
+            .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+            .getTokenValue();
+
+    mvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + forged))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("unauthenticated"));
+  }
+
+  private static String base64Url(String json) {
+    return Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(json.getBytes(StandardCharsets.UTF_8));
   }
 
   @Test

@@ -19,6 +19,11 @@ export class ApiProblem extends Error {
   readonly detail: string;
   readonly errors: FieldError[];
   readonly traceId?: string;
+  /**
+   * Miembros de extensión numéricos (RFC 9457 §3.2), p. ej. `limitHours` y `alreadyLoggedHours` de
+   * `daily-hours-exceeded`. Solo se conservan números finitos: nunca texto libre del servidor.
+   */
+  readonly extensions: Readonly<Record<string, number>>;
 
   constructor(init: {
     status: number;
@@ -27,6 +32,7 @@ export class ApiProblem extends Error {
     detail: string;
     errors?: FieldError[];
     traceId?: string;
+    extensions?: Record<string, number>;
   }) {
     super(init.detail);
     this.name = 'ApiProblem';
@@ -36,6 +42,12 @@ export class ApiProblem extends Error {
     this.detail = init.detail;
     this.errors = init.errors ?? [];
     this.traceId = init.traceId;
+    this.extensions = { ...init.extensions };
+  }
+
+  /** Valor numérico de un miembro de extensión, si el servidor lo informó. */
+  numberExtension(name: string): number | undefined {
+    return Object.hasOwn(this.extensions, name) ? this.extensions[name] : undefined;
   }
 
   /** Mensaje del campo indicado, si el servidor lo informó en `errors[]`. */
@@ -62,6 +74,27 @@ function parseFieldErrors(value: unknown): FieldError[] {
   });
 }
 
+const STANDARD_MEMBERS = new Set([
+  'type',
+  'title',
+  'status',
+  'detail',
+  'instance',
+  'code',
+  'traceId',
+  'errors',
+]);
+
+function parseNumericExtensions(body: Record<string, unknown>): Record<string, number> {
+  const extensions: Record<string, number> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (!STANDARD_MEMBERS.has(key) && typeof value === 'number' && Number.isFinite(value)) {
+      extensions[key] = value;
+    }
+  }
+  return extensions;
+}
+
 /** Convierte un cuerpo arbitrario en `ApiProblem`, con textos de respaldo en español. */
 export function toApiProblem(status: number, body: unknown): ApiProblem {
   const b = isRecord(body) ? body : {};
@@ -75,6 +108,7 @@ export function toApiProblem(status: number, body: unknown): ApiProblem {
     detail: asString(b.detail) ?? (tooMany ? TOO_MANY_REQUESTS_DETAIL : GENERIC_ERROR_DETAIL),
     errors: parseFieldErrors(b.errors),
     traceId: asString(b.traceId),
+    extensions: parseNumericExtensions(b),
   });
 }
 

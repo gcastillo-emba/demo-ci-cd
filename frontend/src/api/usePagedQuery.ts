@@ -2,8 +2,18 @@ import { keepPreviousData, useQuery, type QueryKey } from '@tanstack/react-query
 
 /**
  * Consulta paginada (design D9): conserva la página anterior mientras llega la siguiente, para que
- * la tabla no parpadee al cambiar de página o de filtro. La reutilizan C2 y C3.
+ * la tabla no parpadee al cambiar de página o de filtro. La reutilizan C2 y C3. `enabled: false`
+ * suspende la consulta (p. ej. con un rango de fechas inválido en los filtros).
  */
-export function usePagedQuery<T>(queryKey: QueryKey, fetcher: () => Promise<T>) {
-  return useQuery({ queryKey, queryFn: fetcher, placeholderData: keepPreviousData });
+export function usePagedQuery<T>(
+  queryKey: QueryKey,
+  fetcher: () => Promise<T>,
+  options: { enabled?: boolean } = {},
+) {
+  return useQuery({
+    queryKey,
+    queryFn: fetcher,
+    placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
+  });
 }

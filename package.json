@@ -34,7 +34,7 @@
     "bitacora:resumen": "node scripts/claude-resumen-bitacora.mjs"
   },
   "devDependencies": {
-    "@fission-ai/openspec": "1.14.0",
+    "@fission-ai/openspec": "1.15.0",
     "@redocly/cli": "2.71.0",
     "openapi-typescript": "7.13.0",
     "prettier": "3.9.10"

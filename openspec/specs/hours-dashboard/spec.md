@@ -176,7 +176,7 @@ Para un usuario con rol `PARTNER`, el sistema SHALL (DEBE) agregar los registros
 
 ### Requirement: Alcance del abogado
 
-Para un usuario con rol `LAWYER`, el sistema SHALL (DEBE) agregar únicamente los registros de los que es autor. `byLawyer` SHALL (DEBE) contener siempre exactamente una fila, la del propio abogado, también cuando no tiene horas contadas en la ventana; en ese caso la fila tiene `approvedHours` = 0.0 y `pendingHours` = 0.0 (ver `design.md`, Supuesto 1). `byMatter` y `totals` SHALL (DEBE) reflejar solo sus horas. El sistema SHALL NOT (NO DEBE) exponer filas, nombres ni horas de otros abogados, ni asuntos en los que solo otros abogados registraron horas.
+Para un usuario con rol `LAWYER`, el sistema SHALL (DEBE) agregar únicamente los registros de los que es autor. `byLawyer` SHALL (DEBE) contener siempre exactamente una fila, la del propio abogado, también sin horas contadas en la ventana, con `approvedHours` = 0.0 y `pendingHours` = 0.0. `byMatter` y `totals` SHALL (DEBE) reflejar solo sus horas. El sistema SHALL NOT (NO DEBE) exponer filas, nombres ni horas de otros abogados, ni asuntos en los que solo otros abogados registraron horas.
 
 #### Scenario: El abogado solo ve sus horas
 
@@ -214,13 +214,13 @@ Cuando no hay registros contados en la ventana dentro del alcance del usuario, e
 
 ### Requirement: Pantalla Tablero
 
-El frontend SHALL (DEBE) ofrecer, a usuarios autenticados con rol `PARTNER` o `LAWYER`, una pantalla titulada "Tablero" accesible desde la navegación principal. La pantalla SHALL (DEBE) mostrar siempre la ventana fija de los últimos 30 días, con el período visible como texto (por ejemplo, "Últimos 30 días: 09/10/2026 – 07/11/2026"), y SHALL NOT (NO DEBE) ofrecer controles para cambiar el rango. SHALL (DEBE) mostrar los totales del período como texto: "Aprobadas: X h" y "Pendientes: Y h", con coma decimal.
+El frontend SHALL (DEBE) ofrecer, a usuarios autenticados con rol `PARTNER` o `LAWYER`, una pantalla titulada "Tablero" accesible desde la navegación principal. La pantalla SHALL (DEBE) mostrar siempre la ventana fija de los últimos 30 días, con el período visible como texto, y SHALL NOT (NO DEBE) ofrecer controles para cambiar el rango. SHALL (DEBE) mostrar los totales del período como texto: "Aprobadas: X h" y "Pendientes: Y h", con coma decimal.
 
 #### Scenario: El socio abre el Tablero
 
 - **GIVEN** (Dado) un socio autenticado y registros contados en los últimos 30 días
 - **WHEN** (Cuando) entra a "Tablero" desde la navegación
-- **THEN** (Entonces) ve el encabezado "Tablero", el texto del período de 30 días y los totales "Aprobadas" y "Pendientes"
+- **THEN** (Entonces) ve el encabezado "Tablero", el texto del período de 30 días (por ejemplo, "Últimos 30 días: 09/10/2026 – 07/11/2026") y los totales "Aprobadas" y "Pendientes"
 - **AND** no hay campos para elegir fechas
 
 #### Scenario: El abogado ve solo su fila

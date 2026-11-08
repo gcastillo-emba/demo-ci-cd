@@ -44,7 +44,7 @@ El sistema SHALL (DEBE) permitir que un usuario con rol `LAWYER` registre horas 
 
 ### Requirement: Campos controlados por el servidor
 
-El sistema SHALL NOT (NO DEBE) aceptar del cliente los campos que controla el servidor. En `POST /api/time-entries` y en `PUT /api/time-entries/{id}`, los campos `id`, `lawyerId`, `lawyerName`, `matterCode`, `status`, `rejectionReason`, `createdAt` y `editableUntil` enviados en el cuerpo SHALL (DEBEN) ignorarse en silencio: el registro SHALL (DEBE) pertenecer siempre al abogado autenticado, nacer y seguir en estado `PENDING` tras una edición, sin `rejectionReason`, y con `createdAt` fijado por el servidor con su `Clock`.
+En `POST /api/time-entries` y en `PUT /api/time-entries/{id}`, los campos `id`, `lawyerId`, `lawyerName`, `matterCode`, `status`, `rejectionReason`, `createdAt` y `editableUntil` enviados en el cuerpo SHALL (DEBEN) ignorarse en silencio: el registro SHALL (DEBE) pertenecer siempre al abogado autenticado, nacer y seguir en estado `PENDING` tras una edición, sin `rejectionReason`, y con `createdAt` fijado por el servidor con su `Clock`.
 
 #### Scenario: Alta con campos de solo lectura
 
@@ -383,7 +383,7 @@ El sistema SHALL (DEBE) permitir que un usuario `PARTNER` apruebe un registro `P
 
 ### Requirement: Rechazo de registros con motivo obligatorio
 
-El sistema SHALL (DEBE) permitir que un usuario `PARTNER` rechace un registro `PENDING` mediante `POST /api/time-entries/{id}/reject` con `reason` de 1 a 500 caracteres (sin espacios al inicio y al final), respondiendo 200 con el registro en estado `REJECTED` y su `rejectionReason`. El sistema SHALL (DEBE) responder 422 `rejection-reason-required` si `reason` falta, está en blanco o supera 500 caracteres; 409 `entry-not-pending` si el registro no está `PENDING`; y 403 `forbidden` si quien invoca es `LAWYER`.
+Un usuario `PARTNER` SHALL (DEBE) poder rechazar un registro `PENDING` mediante `POST /api/time-entries/{id}/reject` con `reason` de 1 a 500 caracteres (sin espacios al inicio y al final), respondiendo 200 con el registro en estado `REJECTED` y su `rejectionReason`. El sistema SHALL (DEBE) responder 422 `rejection-reason-required` si `reason` falta, está en blanco o supera 500 caracteres; 409 `entry-not-pending` si el registro no está `PENDING`; y 403 `forbidden` si quien invoca es `LAWYER`.
 
 #### Scenario: Socio rechaza con motivo
 
@@ -435,70 +435,6 @@ El sistema SHALL NOT (NO DEBE) permitir ninguna transición de estado desde `APP
 - **THEN** (Entonces) la respuesta es 409 con `code` = `entry-not-pending`
 - **AND** el registro sigue `REJECTED`
 
-### Requirement: Listado de registros con filtros y paginación
-
-El sistema SHALL (DEBE) exponer `GET /api/time-entries` con filtros opcionales `matterId`, `lawyerId`, `status`, `from` y `to` (rango inclusivo sobre `workDate`) y paginación `page` (base 0, por defecto 0) y `size` (por defecto 20, máximo 100), respondiendo 200 con `{items, page, size, totalItems, totalPages}`. Para un `PARTNER` SHALL (DEBE) devolver registros de todos los abogados que cumplan los filtros. Para un `LAWYER` SHALL (DEBE) devolver solo sus propios registros y SHALL (DEBE) ignorar `lawyerId`. El parámetro opcional `sort` SHALL (DEBE) aceptar solo `workDate,desc` (valor por defecto: `workDate` descendente y, a igual fecha, `createdAt` descendente) y `createdAt,asc` (`createdAt` ascendente). Cada elemento de `items` SHALL (DEBE) incluir `editableUntil`: la última fecha (en `America/La_Paz`) en que el registro puede editarse, igual a su fecha de creación en La Paz más 7 días. El sistema SHALL (DEBE) responder 400 `validation-error` si `size` es mayor que 100 o menor que 1, si `page` es negativo, si `status` o `sort` no son valores válidos o si `from` es posterior a `to`.
-
-#### Scenario: Socio filtra pendientes de un abogado
-
-- **GIVEN** (Dado) un socio autenticado y registros de varios abogados en distintos estados
-- **WHEN** (Cuando) invoca `GET /api/time-entries?lawyerId={A}&status=PENDING`
-- **THEN** (Entonces) la respuesta es 200 y todos los `items` son `PENDING` y del abogado A
-
-#### Scenario: Socio filtra por asunto y rango de fechas
-
-- **GIVEN** (Dado) un socio autenticado y registros del asunto M entre 2026-10-01 y 2026-11-07
-- **WHEN** (Cuando) invoca `GET /api/time-entries?matterId={M}&from=2026-11-01&to=2026-11-05`
-- **THEN** (Entonces) todos los `items` son del asunto M con `workDate` entre 2026-11-01 y 2026-11-05, ambos incluidos
-
-#### Scenario: Abogado solo ve lo suyo
-
-- **GIVEN** (Dado) un abogado A autenticado y registros de los abogados A y B
-- **WHEN** (Cuando) invoca `GET /api/time-entries?lawyerId={B}`
-- **THEN** (Entonces) la respuesta es 200 y todos los `items` pertenecen al abogado A
-
-#### Scenario: Paginación por defecto
-
-- **GIVEN** (Dado) un socio autenticado y 45 registros
-- **WHEN** (Cuando) invoca `GET /api/time-entries` sin parámetros de paginación
-- **THEN** (Entonces) la respuesta tiene `page` = 0, `size` = 20, 20 `items`, `totalItems` = 45 y `totalPages` = 3
-
-#### Scenario: Tamaño de página excesivo
-
-- **GIVEN** (Dado) un usuario autenticado
-- **WHEN** (Cuando) invoca `GET /api/time-entries?size=101`
-- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error` y `errors[].field` = `size`
-
-#### Scenario: Rango de fechas invertido
-
-- **GIVEN** (Dado) un usuario autenticado
-- **WHEN** (Cuando) invoca `GET /api/time-entries?from=2026-11-05&to=2026-11-01`
-- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error`
-
-#### Scenario: Orden por defecto
-
-- **GIVEN** (Dado) un abogado con registros de `workDate` 2026-11-03, 2026-11-05 y dos de 2026-11-04 creados en distinto momento
-- **WHEN** (Cuando) invoca `GET /api/time-entries` sin `sort`
-- **THEN** (Entonces) los `items` vienen en orden 2026-11-05, 2026-11-04 (el creado más tarde), 2026-11-04 (el creado antes), 2026-11-03
-
-#### Scenario: Orden de la cola de aprobaciones
-
-- **GIVEN** (Dado) un socio autenticado y tres registros `PENDING` creados en momentos distintos
-- **WHEN** (Cuando) invoca `GET /api/time-entries?status=PENDING&sort=createdAt,asc`
-- **THEN** (Entonces) los `items` vienen del más antiguo al más reciente por `createdAt`
-
-#### Scenario: Orden no admitido
-
-- **GIVEN** (Dado) un usuario autenticado
-- **WHEN** (Cuando) invoca `GET /api/time-entries?sort=hours,desc`
-- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error` y `errors[].field` = `sort`
-
-#### Scenario: Fecha límite de edición en la respuesta
-
-- **GIVEN** (Dado) un registro creado el 2026-10-31 (fecha en `America/La_Paz`)
-- **WHEN** (Cuando) su autor invoca `GET /api/time-entries`
-- **THEN** (Entonces) el elemento de ese registro tiene `editableUntil` = 2026-11-07
-
 ### Requirement: Pantalla "Registrar horas"
 
 El sistema SHALL (DEBE) ofrecer al abogado un formulario "Registrar horas" con asunto (solo asuntos `OPEN`), fecha de trabajo (por defecto hoy en `America/La_Paz`), horas y descripción, que acepte coma o punto como separador decimal en las horas, y que tras un alta exitosa muestre una confirmación en español y limpie el formulario. La opción "Registrar horas" SHALL NOT (NO DEBE) mostrarse a un socio.
@@ -548,7 +484,7 @@ El sistema SHALL (DEBE) mostrar al abogado la lista paginada "Mis registros" con
 
 ### Requirement: Pantalla "Aprobaciones"
 
-El sistema SHALL (DEBE) ofrecer al socio la cola "Aprobaciones" con los registros `PENDING` de todos los abogados (abogado, asunto, fecha, horas, descripción), con las acciones "Aprobar" y "Rechazar". "Rechazar" SHALL (DEBE) abrir un diálogo que exige un motivo de 1 a 500 caracteres; el botón de confirmación SHALL NOT (NO DEBE) estar habilitado mientras el motivo esté vacío. Tras aprobar o rechazar, el registro SHALL (DEBE) desaparecer de la cola. La opción "Aprobaciones" SHALL NOT (NO DEBE) mostrarse a un abogado.
+El sistema SHALL (DEBE) ofrecer al socio la cola "Aprobaciones" con los registros `PENDING` de todos los abogados (abogado, asunto, fecha, horas, descripción), con las acciones "Aprobar" y "Rechazar". "Rechazar" SHALL (DEBE) abrir un diálogo que exige un motivo de 1 a 500 caracteres; el botón de confirmación SHALL NOT (NO DEBE) habilitarse con el motivo vacío. Tras aprobarlo o rechazarlo, SHALL (DEBE) desaparecer de la cola. La opción "Aprobaciones" SHALL NOT (NO DEBE) mostrarse a un abogado.
 
 #### Scenario: Aprobar desde la cola
 
@@ -591,3 +527,83 @@ El sistema SHALL (DEBE) mostrar en la UI cada error de la API como un mensaje cl
 - **WHEN** (Cuando) escribe "1,25" en horas y guarda
 - **THEN** (Entonces) junto al campo horas se muestra en español que las horas deben ir en incrementos de 0,1
 - **AND** no se muestra el slug `hours-invalid-increment`
+
+### Requirement: Filtros y paginación del listado de registros
+
+El sistema SHALL (DEBE) exponer `GET /api/time-entries` con filtros opcionales `matterId`, `lawyerId`, `status`, `from` y `to` (rango inclusivo sobre `workDate`) y paginación `page` (base 0, por defecto 0) y `size` (por defecto 20, máximo 100), respondiendo 200 con `{items, page, size, totalItems, totalPages}`.
+
+#### Scenario: Socio filtra pendientes de un abogado
+
+- **GIVEN** (Dado) un socio autenticado y registros de varios abogados en distintos estados
+- **WHEN** (Cuando) invoca `GET /api/time-entries?lawyerId={A}&status=PENDING`
+- **THEN** (Entonces) la respuesta es 200 y todos los `items` son `PENDING` y del abogado A
+
+#### Scenario: Socio filtra por asunto y rango de fechas
+
+- **GIVEN** (Dado) un socio autenticado y registros del asunto M entre 2026-10-01 y 2026-11-07
+- **WHEN** (Cuando) invoca `GET /api/time-entries?matterId={M}&from=2026-11-01&to=2026-11-05`
+- **THEN** (Entonces) todos los `items` son del asunto M con `workDate` entre 2026-11-01 y 2026-11-05, ambos incluidos
+
+#### Scenario: Paginación por defecto
+
+- **GIVEN** (Dado) un socio autenticado y 45 registros
+- **WHEN** (Cuando) invoca `GET /api/time-entries` sin parámetros de paginación
+- **THEN** (Entonces) la respuesta tiene `page` = 0, `size` = 20, 20 `items`, `totalItems` = 45 y `totalPages` = 3
+
+### Requirement: Alcance del listado según el rol
+
+En `GET /api/time-entries`, para un `PARTNER` el sistema SHALL (DEBE) devolver registros de todos los abogados que cumplan los filtros. Para un `LAWYER` SHALL (DEBE) devolver solo sus propios registros y SHALL (DEBE) ignorar `lawyerId`.
+
+#### Scenario: Abogado solo ve lo suyo
+
+- **GIVEN** (Dado) un abogado A autenticado y registros de los abogados A y B
+- **WHEN** (Cuando) invoca `GET /api/time-entries?lawyerId={B}`
+- **THEN** (Entonces) la respuesta es 200 y todos los `items` pertenecen al abogado A
+
+### Requirement: Orden del listado de registros
+
+En `GET /api/time-entries`, el parámetro opcional `sort` SHALL (DEBE) aceptar solo `workDate,desc` (valor por defecto: `workDate` descendente y, a igual fecha, `createdAt` descendente) y `createdAt,asc` (`createdAt` ascendente).
+
+#### Scenario: Orden por defecto
+
+- **GIVEN** (Dado) un abogado con registros de `workDate` 2026-11-03, 2026-11-05 y dos de 2026-11-04 creados en distinto momento
+- **WHEN** (Cuando) invoca `GET /api/time-entries` sin `sort`
+- **THEN** (Entonces) los `items` vienen en orden 2026-11-05, 2026-11-04 (el creado más tarde), 2026-11-04 (el creado antes), 2026-11-03
+
+#### Scenario: Orden de la cola de aprobaciones
+
+- **GIVEN** (Dado) un socio autenticado y tres registros `PENDING` creados en momentos distintos
+- **WHEN** (Cuando) invoca `GET /api/time-entries?status=PENDING&sort=createdAt,asc`
+- **THEN** (Entonces) los `items` vienen del más antiguo al más reciente por `createdAt`
+
+### Requirement: Fecha límite de edición en el listado
+
+Cada elemento de `items` de `GET /api/time-entries` SHALL (DEBE) incluir `editableUntil`: la última fecha (en `America/La_Paz`) en que el registro puede editarse, igual a su fecha de creación en La Paz más 7 días.
+
+#### Scenario: Fecha límite de edición en la respuesta
+
+- **GIVEN** (Dado) un registro creado el 2026-10-31 (fecha en `America/La_Paz`)
+- **WHEN** (Cuando) su autor invoca `GET /api/time-entries`
+- **THEN** (Entonces) el elemento de ese registro tiene `editableUntil` = 2026-11-07
+
+### Requirement: Validación de parámetros del listado
+
+En `GET /api/time-entries`, el sistema SHALL (DEBE) responder 400 `validation-error` si `size` es mayor que 100 o menor que 1, si `page` es negativo, si `status` o `sort` no son valores válidos o si `from` es posterior a `to`.
+
+#### Scenario: Tamaño de página excesivo
+
+- **GIVEN** (Dado) un usuario autenticado
+- **WHEN** (Cuando) invoca `GET /api/time-entries?size=101`
+- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error` y `errors[].field` = `size`
+
+#### Scenario: Rango de fechas invertido
+
+- **GIVEN** (Dado) un usuario autenticado
+- **WHEN** (Cuando) invoca `GET /api/time-entries?from=2026-11-05&to=2026-11-01`
+- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error`
+
+#### Scenario: Orden no admitido
+
+- **GIVEN** (Dado) un usuario autenticado
+- **WHEN** (Cuando) invoca `GET /api/time-entries?sort=hours,desc`
+- **THEN** (Entonces) la respuesta es 400 con `code` = `validation-error` y `errors[].field` = `sort`

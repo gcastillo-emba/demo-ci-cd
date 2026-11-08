@@ -42,7 +42,7 @@ Reglas transversales: nada de `Thread.sleep`; fechas siempre vía `Clock`; datos
 | E2E Playwright                                      | Mecánico | CI `e2e`                              | Sí                                     |
 | CodeQL, dependency-review, gitleaks                 | Mecánico | `security.yml`                        | Una alerta high bloquea `seguridad:ok` |
 | Hooks `guard-secrets`, `guard-git-push`             | Mecánico | Claude Code local                     | Bloquea la acción del agente           |
-| Trazabilidad spec ↔ brief, calidad de tests        | Juicio   | revisor → etiqueta `revisor:aprobado` | Sí (ADR-004)                           |
+| Trazabilidad spec ↔ brief, calidad de tests         | Juicio   | revisor → etiqueta `revisor:aprobado` | Sí (ADR-004)                           |
 | Revisión de seguridad del diff                      | Juicio   | seguridad → etiqueta `seguridad:ok`   | Sí (ADR-004)                           |
 | Push del tag de release `v0.1.0`                    | Juicio   | humano                                | —                                      |
 

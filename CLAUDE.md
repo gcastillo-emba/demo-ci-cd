@@ -19,6 +19,7 @@ Este archivo complementa `AGENTS.md` (importado arriba) con lo específico de Cl
 | Evals del asistente (fake)                                     | `npm run evals`                                                                                              |
 | E2E / evidencia                                                | `npm run e2e` · `npm run evidence -- <cambio>`                                                               |
 | Stack completo                                                 | `docker compose up --build --wait` · `docker compose down -v`                                                |
+| Demo con imágenes de GHCR (cronometrada) / resumen headless    | `npm run demo:check` · `npm run bitacora:resumen` (ver `docs/runbook.md`)                                    |
 | Tests de hooks / scripts                                       | `npm run hooks:test` · `npm run scripts:test`                                                                |
 | Formato                                                        | `npm run format:check`                                                                                       |
 
@@ -84,6 +85,15 @@ El merge solo ocurre con `scripts/merge-si-verde.mjs` (`/merge-si-verde <pr>`), 
 
 - `.mcp.json`: Playwright MCP (lo usa `qa`).
 - `.claude/launch.json`: `frontend-dev` (Vite en 5173) y `compose` (stack en 8080).
+
+## Modo headless
+
+Ejemplo de Claude Code sin interfaz (`claude -p`): `scripts/claude-resumen-bitacora.mjs` (`npm run bitacora:resumen`) resume `docs/bitacora-fallas.md` en `docs/bitacora-resumen.md` (fallas por fase y tipo, causas recurrentes y top 5 lecciones para MADA-MB).
+
+- Comando: `claude -p "<prompt>" --output-format json --max-turns 3 --allowedTools Read`, lanzado con `capture` de `scripts/lib/run.mjs`; el script lee `result`, `num_turns` y `total_cost_usd` del JSON y escribe el resumen con una cabecera que indica que se generó en modo headless y su fecha.
+- `--dry-run` imprime el comando; `--salida <ruta>` cambia el archivo. Sin el CLI `claude` en el PATH, termina con código 0 y un aviso.
+- CI: `.github/workflows/bitacora-resumen.yml`, solo `workflow_dispatch`, inerte sin el secreto `ANTHROPIC_API_KEY`; sube el resumen como artefacto y no hace commits.
+- El resumen es texto generado por un modelo: se revisa antes de citarlo en el informe de F6.
 
 ## Trabajo en paralelo con worktrees (F4)
 

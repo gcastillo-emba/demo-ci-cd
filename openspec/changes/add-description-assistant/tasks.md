@@ -1,8 +1,8 @@
 ## 1. Contrato
 
-- [ ] 1.1 Agregar a `api/openapi.yaml` la operación `POST /api/assistant/description-suggestions` (tag `assistant`, seguridad Bearer) con `DescriptionSuggestionRequest { note, matterId? }` y `DescriptionSuggestionResponse { suggestion (1..300), provider [fake, anthropic] }`, y respuestas `200`, `400`, `401`, `403`, `404`, `503` en `application/problem+json`; verificar con `npm run api:lint` en verde.
-- [ ] 1.2 Agregar `description-assistant: boolean` al esquema de `GET /api/features` y el campo opcional `code` en los elementos de `errors[]` del esquema `Problem` compartido (supuesto 3); el esquema `Problem` lo define el contrato compartido (introducido por `add-clients-matters`), así que este cambio se coordina con el dueño del contrato y se mergea en `main` antes del PR de C4, de modo que una regeneración posterior no elimine `errors[].code`; verificar con `npm run api:lint`, revisión de diff sin cambios incompatibles y aprobación del dueño del contrato en el PR.
-- [ ] 1.3 Regenerar el cliente con `npm run api:generate` y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde.
+- [x] 1.1 Agregar a `api/openapi.yaml` la operación `POST /api/assistant/description-suggestions` (tag `assistant`, seguridad Bearer) con `DescriptionSuggestionRequest { note, matterId? }` y `DescriptionSuggestionResponse { suggestion (1..300), provider [fake, anthropic] }`, y respuestas `200`, `400`, `401`, `403`, `404`, `503` en `application/problem+json`; verificar con `npm run api:lint` en verde.
+- [x] 1.2 Agregar `description-assistant: boolean` al esquema de `GET /api/features` y el campo opcional `code` en los elementos de `errors[]` del esquema `Problem` compartido (supuesto 3); el esquema `Problem` lo define el contrato compartido (introducido por `add-clients-matters`), así que este cambio se coordina con el dueño del contrato y se mergea en `main` antes del PR de C4, de modo que una regeneración posterior no elimine `errors[].code`; verificar con `npm run api:lint`, revisión de diff sin cambios incompatibles y aprobación del dueño del contrato en el PR.
+- [x] 1.3 Regenerar el cliente con `npm run api:generate` y commitear `frontend/src/api/generated/schema.ts`; verificar con `npm run api:check` en verde.
 
 ## 2. Backend
 

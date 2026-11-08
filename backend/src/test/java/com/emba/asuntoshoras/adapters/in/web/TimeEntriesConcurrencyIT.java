@@ -76,10 +76,9 @@ class TimeEntriesConcurrencyIT extends AbstractTimeEntriesIT {
   }
 
   /**
-   * Scenario: Alta y edición simultáneas el mismo día. La spec usa una edición a 14 h, pero 10 + 14
-   * = 24 no supera el límite (inclusivo, escenario "Completar exactamente 24 horas") y ambas
-   * tendrían éxito; se usa 15 h para que el resultado conjunto (25 h) supere el límite, que es la
-   * intención del escenario (reportado al integrador).
+   * Scenario: Alta y edición simultáneas el mismo día. Edición a 15 h: el resultado conjunto (25 h)
+   * supera el límite inclusivo de 24 h (la primera versión de la spec decía 14 h; corregida en la
+   * integración, ver bitácora).
    */
   @Test
   void parallelCreateAndEditOnlyOneSucceeds() throws Exception {

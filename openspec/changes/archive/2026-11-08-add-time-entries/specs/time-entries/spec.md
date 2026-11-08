@@ -165,7 +165,7 @@ El sistema SHALL NOT (NO DEBE) aceptar operaciones concurrentes de alta o de edi
 #### Scenario: Alta y edición simultáneas el mismo día
 
 - **GIVEN** (Dado) un abogado con un único registro `PENDING` editable de 10 h el 2026-11-05
-- **WHEN** (Cuando) envía en paralelo un `POST /api/time-entries` de 10 h para el 2026-11-05 y un `PUT /api/time-entries/{id}` que cambia ese registro a 14 h con la `version` vigente
+- **WHEN** (Cuando) envía en paralelo un `POST /api/time-entries` de 10 h para el 2026-11-05 y un `PUT /api/time-entries/{id}` que cambia ese registro a 15 h con la `version` vigente
 - **THEN** (Entonces) exactamente una de las dos respuestas es exitosa (201 o 200) y la otra es 422 con `code` = `daily-hours-exceeded`
 - **AND** la suma de horas `PENDING` del abogado ese día es como máximo 24
 

@@ -74,6 +74,29 @@ Migración `V3__time_entries.sql` con FK a `users` y `matters`, índice `(lawyer
 12. Los asuntos de la lista desplegable de "Registrar horas" vienen del listado de C1 filtrado por `status=OPEN`.
 13. **Cerrar un asunto no altera sus registros** (Supuesto S1 de `add-clients-matters`): los registros `PENDING` de un asunto `CLOSED` siguen `PENDING`, el socio puede aprobarlos o rechazarlos (approve/reject no evalúan `matter-closed`) y el autor no puede editarlos (422 `matter-closed`, Supuesto 6).
 
+Supuestos surgidos en la implementación (backend):
+
+14. **Escenario "Alta y edición simultáneas el mismo día" corregido**: la edición pasa de 14 h a 15 h. Con 14 h el resultado conjunto era exactamente 24 h, que el límite admite (escenario "Completar exactamente 24 horas"), así que ambas peticiones tenían éxito y el escenario era imposible. Con 15 h el conjunto suma 25 h y solo una puede ganar.
+15. **`sort` se convierte con un `@InitBinder` (PropertyEditor) en el controller**, no con un `Converter`: cuando el `Converter` rechazaba el valor, Spring caía en `Enum.valueOf` y aceptaba `WORK_DATE_DESC`. Cualquier valor distinto de `workDate,desc` o `createdAt,asc` → 400 `validation-error` con `field=sort`.
+16. **`InvalidValueException` del dominio → 400 `validation-error` con `errors[{field, message}]`** (su `code` deja de ser `invalid-value`; seguimiento de la revisión de C1). Un rango `from > to` responde `field=from`.
+17. **Miembros de extensión del Problem**: `DomainException.properties()` (vacío por defecto) los transporta. `daily-hours-exceeded` agrega `limitHours` y `alreadyLoggedHours`; su `detail` solo usa números calculados por el servidor, con coma decimal, nunca texto del usuario.
+18. **Horas en las respuestas**: `hours`, `limitHours` y `alreadyLoggedHours` se serializan como enteros si no hay décimas (`24`) y con un decimal en otro caso (`1.5`).
+19. **Bloqueo por fila**: editar, aprobar y rechazar leen el registro con `SELECT … FOR UPDATE`; la edición toma además los advisory locks de ambas fechas en orden ascendente. La `version` se compara contra la fila bloqueada y `@Version` queda como respaldo.
+20. **Orden de evaluación en la edición según D5 al pie de la letra**: un asunto destino inexistente responde 404 antes que `not-entry-owner`, de modo que un no-dueño puede saber si un id de asunto existe (riesgo bajo: los asuntos son visibles para todo usuario autenticado en C1).
+21. **CHECK de la base más estricto que D9**: `CHECK ((status = 'REJECTED') = (rejection_reason IS NOT NULL))` (si y solo si), igual que el invariante del dominio.
+22. **El seed se llama `R__seed_time_entries.sql`** (no `R__demo_time_entries.sql` como dicen D9 y la tarea 2.11): Flyway ejecuta las repetibles por orden de descripción y "demo" correría antes que los seeds de usuarios y asuntos, rompiendo las FK. Tiene 13 registros con fechas relativas a hoy en La Paz (al menos un día atrás), ≤ 24 h por abogado y día, e incluye un `PENDING` sobre un asunto cerrado.
+
+Supuestos surgidos en la implementación (frontend y E2E):
+
+23. **Sesión E2E reutilizada por `storageState`**: un `globalSetup` inicia sesión una vez por rol (lo exige el rate limit de login de nginx, 5 req/min por IP). Los archivos de sesión se copiaron del PR del rate limit para que el merge no tenga conflicto; `e2e/.gitignore` ignora `.auth/`.
+24. **Fecha aislada por corrida en el E2E**: se usa una fecha pasada al azar (entre 400 y unos 3000 días atrás) y las listas se filtran con `?from=&to=`, para que las horas de corridas previas no sumen al límite diario. Una colisión de fechas entre corridas (muy improbable) haría fallar la aserción "22,5 h".
+25. **Filtros de la UI**: "Mis registros" filtra por Estado y Desde/Hasta; "Aprobaciones" solo por Desde/Hasta (no hay filtro por abogado porque la API no lista usuarios). Con un rango invertido no se consulta la API y se muestra el error junto al campo.
+26. **`ApiProblem.extensions` guarda solo miembros numéricos**; el mensaje del límite diario cae al genérico si faltan `limitHours` o `alreadyLoggedHours`.
+27. **El campo horas es de texto con `inputMode="decimal"`** (no `type=number`) para aceptar la coma; incremento y rango se validan también en el cliente.
+28. **Guard por rol**: una ruta de otro rol muestra "Acceso no permitido" en lugar de redirigir.
+29. **Editar un registro cuyo asunto se cerró**: el selector agrega el asunto actual como opción aunque ya no esté `OPEN`; el servidor responde `matter-closed`.
+30. **`usePagedQuery` gana la opción `enabled`**, retrocompatible con C1. Los estados se muestran como Pendiente, Aprobada y Rechazada (glosario).
+
 ## Risks / Trade-offs
 
 - [El advisory lock depende de PostgreSQL] → Aislado tras el puerto `DailyHoursLock`; el IT de concurrencia con Testcontainers usa la misma imagen que compose.

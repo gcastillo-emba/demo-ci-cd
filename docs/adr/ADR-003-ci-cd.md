@@ -3,6 +3,7 @@
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-07
 - **Revisado:** 2026-11-08 (PR #14): enmienda sin cambio de decisión. Restringe `claude-review.yml` por autor y documenta la desviación de F3 (el job `changes` no se implementó).
+- **Revisado:** 2026-11-08 (PR #PRNUM): enmienda sin cambio de decisión. Actualiza la fila de `dependabot.yml`: `cooldown` de 14 días por ecosistema y los `ignore` agregados después de F3.
 - **Decisores:** humano + arquitecto (diseño de devops)
 - **Relacionado con:** ADR-002, ADR-004, ADR-005
 
@@ -23,7 +24,7 @@ Todas las acciones se fijan por **SHA** (comentario con la versión), cada workf
 | `release.yml`       | Push de tag `v*`                          | Re-etiqueta las imágenes `sha-*` del commit (sin rebuild), genera notas con git-cliff (`cliff.toml`, secciones en español) y ejecuta `gh release create` adjuntando `docker-compose.demo.yml` y el runbook                                                                                                                                                                |
 | `claude-review.yml` | PR                                        | Revisión con Claude; **inerte** si falta el secreto `ANTHROPIC_API_KEY` o `vars.CLAUDE_REVIEW_ENABLED != 'true'`. Solo para autores `OWNER`/`MEMBER`/`COLLABORATOR`; el prompt se lee de la rama base; la clave solo llega al paso de la acción                                                                                                                           |
 | `evals-real.yml`    | `workflow_dispatch`                       | Evals contra el modelo real; inerte con el mismo guard                                                                                                                                                                                                                                                                                                                    |
-| `dependabot.yml`    | Semanal                                   | maven, npm y github-actions; agrupado; ignora majors de Spring Boot                                                                                                                                                                                                                                                                                                       |
+| `dependabot.yml`    | Semanal                                   | maven, npm, docker y github-actions; agrupado; `cooldown` de 14 días (solo versiones publicadas hace al menos 2 semanas). Ignora majors de Spring Boot, springdoc y openapi-generator, majors de npm y de imágenes Docker, `@fission-ai/openspec` >= 1.14.1 y nginx mainline 1.31                                                                                         |
 
 **`ci-ok` es el único check requerido** por el ruleset. Depende de todos los jobs con `if: always()` y falla si alguno terminó en `failure` o `cancelled`; un job `skipped` por paths-filter cuenta como éxito. Así el ruleset no cambia cuando se agregan jobs.
 

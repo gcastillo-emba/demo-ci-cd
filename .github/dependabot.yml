@@ -17,6 +17,9 @@ updates:
       # specs vigentes tienen varios. Se libera cuando se partan esos requisitos (bitácora, PR #18).
       - dependency-name: '@fission-ai/openspec'
         versions: ['>= 1.14.1']
+    # Regla del repo: solo versiones publicadas hace al menos 2 semanas (antes se cerraban PRs a mano, #26 y #27).
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'chore(deps)'
 
@@ -38,6 +41,9 @@ updates:
       # springdoc 3.x requiere Spring Boot 4 (rompe el contexto con Boot 3.5; PR #7). Va junto con el major de Boot.
       - dependency-name: 'org.springdoc:*'
         update-types: ['version-update:semver-major']
+    # Regla del repo: solo versiones publicadas hace al menos 2 semanas (antes se cerraban PRs a mano, #26 y #27).
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'chore(deps)'
 
@@ -60,6 +66,9 @@ updates:
       # (1.30 = tag stable). La próxima estable será 1.32 (PR #6).
       - dependency-name: 'nginxinc/nginx-unprivileged'
         versions: ['>= 1.31, < 1.32']
+    # Regla del repo: solo versiones publicadas hace al menos 2 semanas (antes se cerraban PRs a mano, #26 y #27).
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'chore(deps)'
 
@@ -70,5 +79,8 @@ updates:
     groups:
       actions:
         patterns: ['*']
+    # Regla del repo: solo versiones publicadas hace al menos 2 semanas (antes se cerraban PRs a mano, #26 y #27).
+    cooldown:
+      default-days: 14
     commit-message:
       prefix: 'chore(deps)'

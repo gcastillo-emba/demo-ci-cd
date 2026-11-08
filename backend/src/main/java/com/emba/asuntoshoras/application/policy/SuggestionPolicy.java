@@ -15,6 +15,14 @@ public final class SuggestionPolicy {
   private static final String WHITESPACE_RUN = "[\\s\\p{Z}]+";
 
   /**
+   * Colapsa cualquier secuencia de espacios, tabuladores y saltos de línea en un espacio y recorta.
+   * Debe correr ANTES de redactar datos de contacto (la redacción opera sobre texto normalizado).
+   */
+  public static String normalizeWhitespace(String raw) {
+    return raw.replaceAll(WHITESPACE_RUN, " ").strip();
+  }
+
+  /**
    * Aplica la política.
    *
    * @throws AssistantUnavailableException si el texto es nulo o queda vacío
@@ -23,7 +31,7 @@ public final class SuggestionPolicy {
     if (raw == null) {
       throw new AssistantUnavailableException();
     }
-    String text = raw.replaceAll(WHITESPACE_RUN, " ").strip();
+    String text = normalizeWhitespace(raw);
     if (text.isEmpty()) {
       throw new AssistantUnavailableException();
     }

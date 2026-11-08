@@ -9,10 +9,11 @@ import java.util.regex.Pattern;
  *
  * <ul>
  *   <li>Correo: {@code [\w.+-]+@[\w-]+(\.[\w-]+)+} (con clases Unicode).
- *   <li>Teléfono: {@code +} opcional y 7 o más dígitos, con separadores opcionales de un espacio o
- *       un guion entre dígitos (p. ej. {@code +591 000 00000}, {@code 555-0100-00}). El punto no es
- *       separador, para no confundir montos como {@code 1.500.000}; las fechas {@code AAAA-MM-DD} y
- *       {@code DD/MM/AAAA} se conservan.
+ *   <li>Teléfono: paréntesis y {@code +} opcionales y 7 o más dígitos, con separadores {@code
+ *       [\s.\-–—()]*} entre dígitos (p. ej. {@code +591 000 00000}, {@code (591) 700-00000}, {@code
+ *       700.000.00}). Se conservan las fechas {@code AAAA-MM-DD} y {@code DD/MM/AAAA}, los montos
+ *       con miles {@code 1.500.000} y los números con un único punto y un grupo largo ({@code
+ *       1.2345678}). Todas las regex son lineales (sin cuantificadores anidados).
  * </ul>
  */
 public final class PiiRedactor {
@@ -30,10 +31,20 @@ public final class PiiRedactor {
    */
   private static final Pattern DATE_OR_PHONE =
       Pattern.compile(
-          "(?<![\\w.])((?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}/[0-9]{2}/[0-9]{4})(?![\\w/-]))"
-              + "|((?<![\\w.+-])\\+?[0-9](?:[ -]?[0-9]){6,}(?![\\w]|\\.[0-9]))");
+          "(?<![\\w.])((?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}/[0-9]{2}/[0-9]{4})(?![\\w/-])"
+              + "|[0-9]{1,3}(?:\\.[0-9]{3})+(?![\\w]|\\.[0-9]))"
+              + "|((?<![\\w.+\\-–—])\\(?\\+?[0-9](?:[\\s.\\-–—()]*[0-9]){6,}(?![\\w]|\\.[0-9]))");
 
-  /** Texto con correos y teléfonos reemplazados; {@code null} queda {@code null}. */
+  /**
+   * Número formado solo por dígitos y puntos con un grupo largo (versión, decimal): se conserva.
+   */
+  private static final Pattern DOTTED_NUMBER = Pattern.compile("[0-9.]*[0-9]{5,}[0-9.]*");
+
+  /**
+   * Texto con correos y teléfonos reemplazados; {@code null} queda {@code null}. Debe invocarse
+   * sobre texto con los espacios ya normalizados, aunque también tolera espacios, tabuladores y
+   * saltos de línea entre grupos de dígitos.
+   */
   public String redact(String text) {
     if (text == null || text.isEmpty()) {
       return text;
@@ -42,10 +53,29 @@ public final class PiiRedactor {
     Matcher matcher = DATE_OR_PHONE.matcher(withoutEmails);
     StringBuilder out = new StringBuilder(withoutEmails.length());
     while (matcher.find()) {
-      String replacement = matcher.group(1) != null ? matcher.group(1) : PHONE_MARKER;
-      matcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
+      matcher.appendReplacement(out, Matcher.quoteReplacement(replacement(matcher)));
     }
     matcher.appendTail(out);
     return out.toString();
+  }
+
+  private static String replacement(Matcher matcher) {
+    if (matcher.group(1) != null) {
+      return matcher.group(1);
+    }
+    String candidate = matcher.group(2);
+    if (candidate.indexOf('.') >= 0
+        && hasSingleDot(candidate)
+        && DOTTED_NUMBER.matcher(candidate).matches()) {
+      return candidate;
+    }
+    if (candidate.startsWith("(") && candidate.indexOf(')') < 0) {
+      return "(" + PHONE_MARKER;
+    }
+    return PHONE_MARKER;
+  }
+
+  private static boolean hasSingleDot(String candidate) {
+    return candidate.indexOf('.') == candidate.lastIndexOf('.');
   }
 }

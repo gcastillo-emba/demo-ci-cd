@@ -200,6 +200,33 @@ class DescriptionSuggestionServiceTest {
         .isEqualTo("Llamada con [correo] al [teléfono] para revisar el contrato");
   }
 
+  // Scenario: Proveedor devuelve un correo y un teléfono
+  @Test
+  void phonesWithNonCanonicalWhitespaceInTheOutputAreRedacted() {
+    for (String generated :
+        new String[] {
+          "Llamada al +591  000  00000 hoy",
+          "Llamada al +591\n000\n00000 hoy",
+          "Llamada al 555\t1234\t567 hoy"
+        }) {
+      assistant.returning(generated);
+
+      assertThat(service.suggest(LAWYER, new SuggestionRequest(NOTE, null)).text())
+          .isEqualTo("Llamada al [teléfono] hoy");
+    }
+  }
+
+  // Scenario: El proveedor recibe la nota redactada
+  @Test
+  void providerReceivesARedactedNoteEvenWithLineBreaksAndTabs() {
+    service.suggest(
+        LAWYER, new SuggestionRequest("llamar al +591\n000\n\n00000\ty 555\t1234\t567", null));
+
+    AssistantPrompt prompt = assistant.lastPrompt();
+    assertThat(prompt.note()).isEqualTo("llamar al [teléfono] y [teléfono]");
+    assertThat(prompt.user()).doesNotContain("591").doesNotContain("1234");
+  }
+
   @Test
   void redactionHappensBeforeTruncation() {
     // Sin redactar, el correo quedaría cortado a la mitad en el límite de 300.

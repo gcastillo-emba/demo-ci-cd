@@ -45,6 +45,31 @@ class PiiRedactorTest {
     assertThat(redactor.redact(input)).isEqualTo(expected);
   }
 
+  // Scenario: Proveedor devuelve un correo y un teléfono
+  @Test
+  void redactsPhonesWithNonCanonicalSeparators() {
+    assertThat(redactor.redact("Llamada al +591  000  00000 hoy"))
+        .isEqualTo("Llamada al [teléfono] hoy");
+    assertThat(redactor.redact("Llamada al +591\n000\n00000 hoy"))
+        .isEqualTo("Llamada al [teléfono] hoy");
+    assertThat(redactor.redact("tel 555\t1234\t567.")).isEqualTo("tel [teléfono].");
+    assertThat(redactor.redact("tel 700.000.00 fin")).isEqualTo("tel [teléfono] fin");
+    assertThat(redactor.redact("tel 700–000—0000")).isEqualTo("tel [teléfono]");
+    assertThat(redactor.redact("tel (591) 700-00000 fin")).isEqualTo("tel [teléfono] fin");
+    assertThat(redactor.redact("tel (591) 700 00000")).isEqualTo("tel [teléfono]");
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "monto 1.500.000 hoy",
+        "monto Bs 12.345.678 pagado",
+        "el 2026-11-07 y 07/11/2026 y Bs 1.500.000"
+      })
+  void keepsDatesAndThousandsAmountsNextToText(String input) {
+    assertThat(redactor.redact(input)).isEqualTo(input);
+  }
+
   @ParameterizedTest
   @ValueSource(
       strings = {

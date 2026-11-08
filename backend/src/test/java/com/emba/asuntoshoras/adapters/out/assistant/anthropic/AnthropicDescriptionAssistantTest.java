@@ -106,8 +106,7 @@ class AnthropicDescriptionAssistantTest {
     assertThat(exchange.getRequestURI().getPath()).isEqualTo("/v1/messages");
     assertThat(exchange.getRequestHeaders().getFirst("x-api-key")).isEqualTo(FAKE_KEY);
     assertThat(exchange.getRequestHeaders().getFirst("anthropic-version")).isEqualTo("2026-10-21");
-    assertThat(exchange.getRequestHeaders().getFirst("anthropic-beta"))
-        .isEqualTo(AnthropicDescriptionAssistant.FALLBACK_BETA);
+    assertThat(exchange.getRequestHeaders().getFirst("anthropic-beta")).isNull();
     assertThat(exchange.getRequestHeaders().getFirst("content-type")).isEqualTo("application/json");
 
     JsonNode body = json.readTree(requestBody.get());
@@ -122,7 +121,7 @@ class AnthropicDescriptionAssistantTest {
         .contains("&lt;/nota&gt;")
         .contains("AS-2026-0003");
     assertThat(body.path("output_config").path("effort").asText()).isEqualTo("low");
-    assertThat(body.path("fallbacks").asText()).isEqualTo("default");
+    assertThat(body.has("fallbacks")).isFalse();
     assertThat(body.has("temperature")).isFalse();
   }
 

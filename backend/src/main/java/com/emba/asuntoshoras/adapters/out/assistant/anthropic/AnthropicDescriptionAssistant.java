@@ -37,9 +37,6 @@ public final class AnthropicDescriptionAssistant implements DescriptionAssistant
   static final String MESSAGES_PATH = "/v1/messages";
   static final String API_VERSION = "2026-10-21";
 
-  /** Reintento automático en otro modelo si el modelo principal rechaza la nota. */
-  static final String FALLBACK_BETA = "server-side-fallback-2026-07-01";
-
   private static final Logger log = LoggerFactory.getLogger(AnthropicDescriptionAssistant.class);
 
   private final HttpClient http;
@@ -121,13 +118,11 @@ public final class AnthropicDescriptionAssistant implements DescriptionAssistant
     message.put("content", prompt.user());
     // Tarea breve de reformulación: esfuerzo bajo para que el pensamiento no consuma max_tokens.
     body.putObject("output_config").put("effort", "low");
-    body.put("fallbacks", "default");
     return HttpRequest.newBuilder(settings.baseUrl().resolve(MESSAGES_PATH))
         .timeout(settings.timeout())
         .header("content-type", "application/json")
         .header("x-api-key", apiKey)
         .header("anthropic-version", API_VERSION)
-        .header("anthropic-beta", FALLBACK_BETA)
         .POST(
             HttpRequest.BodyPublishers.ofString(
                 json.writeValueAsString(body), StandardCharsets.UTF_8))

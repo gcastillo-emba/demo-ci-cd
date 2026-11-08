@@ -89,9 +89,16 @@ public class DescriptionSuggestionService implements SuggestDescriptionUseCase {
       outcome = Outcome.UNAVAILABLE;
       AssistantNote note = AssistantNote.of(rawNote);
       Optional<MatterCode> matterCode = matterCode(request.matterId());
-      AssistantPrompt prompt = new AssistantPrompt(redactor.redact(note.value()), matterCode);
+      AssistantPrompt prompt =
+          new AssistantPrompt(
+              redactor.redact(SuggestionPolicy.normalizeWhitespace(note.value())), matterCode);
       String generated = invokeWithTimeout(prompt);
-      String suggestion = policy.apply(redactor.redact(generated));
+      if (generated == null) {
+        throw new AssistantUnavailableException();
+      }
+      // Normalizar ANTES de redactar: un teléfono con espacios dobles, \n o \t no debe escapar.
+      String suggestion =
+          policy.apply(redactor.redact(SuggestionPolicy.normalizeWhitespace(generated)));
       suggestionLength = AssistantNote.codePoints(suggestion);
       outcome = Outcome.OK;
       return new Suggestion(suggestion, provider);

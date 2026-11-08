@@ -7,6 +7,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { run } from './lib/run.mjs';
+import { acquire } from './lib/lock.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_BASE_URL = 'http://localhost:8080';
@@ -41,6 +42,13 @@ export function main(argv = process.argv.slice(2)) {
   const exec = (step, extraEnv) =>
     run(step.cmd, step.args, { cwd: ROOT, env: { ...process.env, ...extraEnv } });
 
+  // Candado entre worktrees (bitácora #22): un solo stack compose/E2E a la vez en la máquina.
+  const release = p.up
+    ? acquire('compose-e2e', {
+        onWait: (lp) =>
+          console.log(`… [e2e] otro worktree usa el stack; esperando el candado ${lp}`),
+      })
+    : () => {};
   let code = 0;
   try {
     if (p.up) {
@@ -64,6 +72,7 @@ export function main(argv = process.argv.slice(2)) {
     } else if (p.up) {
       console.log('■ [e2e] --keep: el stack sigue arriba (docker compose down -v para bajarlo).');
     }
+    release();
   }
   return code;
 }

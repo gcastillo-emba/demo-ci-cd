@@ -1,9 +1,9 @@
 ## 1. Contrato
 
-- [ ] 1.1 Agregar a `api/openapi.yaml` la ruta `GET /api/dashboard/summary` (security Bearer, query `from`/`to` `format: date` opcionales, respuestas `200`, `400`, `401` con `Problem`) y verificar con `npm run api:lint` en verde
-- [ ] 1.2 Agregar los esquemas `DashboardSummary`, `MatterHoursRow`, `LawyerHoursRow` y `HoursTotals` (horas `number`, `minimum: 0`, `multipleOf: 0.1`; `from`/`to` `format: date`) con ejemplos en español, y verificar con `npm run api:lint`
-- [ ] 1.3 Regenerar el cliente con `npm run api:generate` y verificar con `npm run api:check` en verde y `frontend/src/api/generated/schema.ts` versionado
-- [ ] 1.4 Verificar que el backend compila contra la interfaz generada nueva (`./mvnw -q compile` falla hasta que exista el controller y pasa después)
+- [x] 1.1 Agregar a `api/openapi.yaml` la ruta `GET /api/dashboard/summary` (security Bearer, query `from`/`to` `format: date` opcionales, respuestas `200`, `400`, `401` con `Problem`) y verificar con `npm run api:lint` en verde
+- [x] 1.2 Agregar los esquemas `DashboardSummary`, `MatterHoursRow`, `LawyerHoursRow` y `HoursTotals` (horas `number`, `minimum: 0`, `multipleOf: 0.1`; `from`/`to` `format: date`) con ejemplos en español, y verificar con `npm run api:lint`
+- [x] 1.3 Regenerar el cliente con `npm run api:generate` y verificar con `npm run api:check` en verde y `frontend/src/api/generated/schema.ts` versionado
+- [x] 1.4 Verificar que el backend compila contra la interfaz generada nueva (`./mvnw -q compile` falla hasta que exista el controller y pasa después)
 
 ## 2. Backend
 

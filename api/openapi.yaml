@@ -24,6 +24,9 @@ info:
     C2 (`add-time-entries`): registros de horas, edición, aprobación y rechazo (etiqueta
     `time-entries`).
 
+    C3 (`add-hours-dashboard`): tablero con el resumen agregado de horas aprobadas y pendientes
+    por asunto y por abogado (etiqueta `dashboard`).
+
     Convenciones de listados compartidas:
 
     - `page` (base 0, máximo 10000) y `size` (1 a 100, por defecto 20); fuera de rango o no
@@ -61,6 +64,10 @@ tags:
     description: |
       Registros de horas (C2). Alta y edición solo `LAWYER` (autor); aprobación y rechazo solo
       `PARTNER`; listado para ambos roles (el abogado solo ve sus registros).
+  - name: dashboard
+    description: |
+      Tablero (C3). Resumen agregado de horas para ambos roles; el `PARTNER` ve a todos los
+      abogados y el `LAWYER` solo sus propias horas.
 security:
   - bearerAuth: []
 paths:
@@ -697,6 +704,147 @@ paths:
                 detail: Indica un motivo de rechazo de 1 a 500 caracteres.
                 code: rejection-reason-required
                 traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/dashboard/summary:
+    get:
+      tags: [dashboard]
+      operationId: getDashboardSummary
+      summary: Resumen del tablero de horas
+      description: |
+        Resumen agregado de horas `APPROVED` y `PENDING` (los registros `REJECTED` no cuentan) por
+        asunto y por abogado, más los totales del período, para cualquier usuario autenticado
+        (no hay `403`). Un `PARTNER` ve los registros de todos los abogados; un `LAWYER` solo los
+        suyos y `byLawyer` contiene siempre exactamente su propia fila (con ceros si no tiene horas
+        en la ventana). La ventana filtra por `workDate` (inclusiva en ambos extremos):
+
+        - Sin `from` ni `to`: últimos 30 días, `[hoy-29, hoy]`, con "hoy" en `America/La_Paz`.
+        - Con `from` y `to`: `[from, to]`, como máximo 92 días contando ambos extremos.
+
+        La respuesta devuelve la ventana efectiva en `from` y `to`. Solo aparecen filas con horas
+        contadas (salvo la fila propia del `LAWYER`); `byMatter` se ordena por `matterCode` y
+        `byLawyer` por `lawyerName`, ambos ascendentes. Un período sin horas responde `200` con
+        listas vacías y totales en cero (nunca `404`). No se pagina. Los parámetros de consulta
+        desconocidos (p. ej. `lawyerId`) se ignoran.
+
+        Responden `400 validation-error` (sin datos agregados), con `errors[].field`: un solo
+        parámetro de la ventana (el ausente), `from` posterior a `to` (`from`), un rango de más de
+        92 días (`to`) y una fecha que no es ISO `YYYY-MM-DD` válida o no existe (el parámetro
+        afectado).
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: |
+            Primer día de la ventana (inclusivo, `YYYY-MM-DD`). Debe enviarse junto con `to`; no
+            puede ser posterior a `to`.
+          schema:
+            type: string
+            format: date
+          example: '2026-10-09'
+        - name: to
+          in: query
+          required: false
+          description: |
+            Último día de la ventana (inclusivo, `YYYY-MM-DD`). Debe enviarse junto con `from`; el
+            rango `from`..`to` admite como máximo 92 días contando ambos extremos.
+          schema:
+            type: string
+            format: date
+          example: '2026-11-07'
+      responses:
+        '200':
+          description: Resumen agregado de la ventana efectiva.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+              example:
+                from: '2026-10-09'
+                to: '2026-11-07'
+                totals:
+                  approvedHours: 9.5
+                  pendingHours: 4.5
+                byMatter:
+                  - matterId: 3c9a1f2e-8b7d-4e6f-a1b2-c3d4e5f60718
+                    matterCode: AS-2026-0001
+                    matterTitle: Constitución de sociedad comercial
+                    approvedHours: 9.5
+                    pendingHours: 0.5
+                  - matterId: 7d2b4c6e-1a3f-4b5d-9e8f-0a1b2c3d4e5f
+                    matterCode: AS-2026-0002
+                    matterTitle: Revisión de contrato de arrendamiento
+                    approvedHours: 0
+                    pendingHours: 4
+                byLawyer:
+                  - lawyerId: 5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b
+                    lawyerName: Ana Pérez
+                    approvedHours: 6
+                    pendingHours: 2
+                  - lawyerId: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+                    lawyerName: Bruno Rojas
+                    approvedHours: 3.5
+                    pendingHours: 2.5
+        '400':
+          description: |
+            La ventana no es válida (`code` = `validation-error`): solo uno de `from`/`to`, `from`
+            posterior a `to`, rango de más de 92 días o fecha con formato inválido o inexistente.
+            `errors[]` indica el parámetro afectado. No incluye datos agregados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                rangeTooLong:
+                  summary: Rango mayor a 92 días
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: to
+                        message: El rango de fechas admite como máximo 92 días.
+                fromAfterTo:
+                  summary: from posterior a to
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: from
+                        message: La fecha inicial no puede ser posterior a la final.
+                missingParameter:
+                  summary: Falta uno de los parámetros
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: to
+                        message: Debe indicarse junto con la fecha inicial.
+                invalidDate:
+                  summary: Fecha inválida
+                  value:
+                    type: https://asuntos-horas.example/problems/validation-error
+                    title: Solicitud inválida
+                    status: 400
+                    detail: La solicitud tiene campos inválidos.
+                    code: validation-error
+                    traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+                    errors:
+                      - field: from
+                        message: Debe ser una fecha válida con formato AAAA-MM-DD.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
@@ -1368,3 +1516,114 @@ components:
       anyOf:
         - $ref: '#/components/schemas/DailyHoursExceededProblem'
         - $ref: '#/components/schemas/Problem'
+    HoursTotals:
+      type: object
+      additionalProperties: false
+      description: |
+        Totales del período dentro del alcance del usuario. Cada valor es igual a la suma de la
+        columna correspondiente en `byMatter` y en `byLawyer`.
+      required: [approvedHours, pendingHours]
+      properties:
+        approvedHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `APPROVED` (decimal con una décima).
+          examples: [9.5]
+        pendingHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `PENDING` (decimal con una décima).
+          examples: [4.5]
+    MatterHoursRow:
+      type: object
+      additionalProperties: false
+      description: Horas contadas de un asunto en la ventana.
+      required: [matterId, matterCode, matterTitle, approvedHours, pendingHours]
+      properties:
+        matterId:
+          type: string
+          format: uuid
+        matterCode:
+          type: string
+          description: Código del asunto (`AS-YYYY-NNNN`).
+          pattern: '^AS-\d{4}-\d{4}$'
+          examples: [AS-2026-0001]
+        matterTitle:
+          type: string
+          maxLength: 200
+          description: Título del asunto.
+          examples: [Constitución de sociedad comercial]
+        approvedHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `APPROVED` del asunto (decimal con una décima).
+          examples: [3.5]
+        pendingHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `PENDING` del asunto (decimal con una décima).
+          examples: [0.5]
+    LawyerHoursRow:
+      type: object
+      additionalProperties: false
+      description: |
+        Horas contadas de un abogado en la ventana. Para un `LAWYER` es siempre su propia fila,
+        con ceros si no tiene horas contadas.
+      required: [lawyerId, lawyerName, approvedHours, pendingHours]
+      properties:
+        lawyerId:
+          type: string
+          format: uuid
+        lawyerName:
+          type: string
+          description: Nombre completo del abogado.
+          examples: [Ana Pérez]
+        approvedHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `APPROVED` del abogado (decimal con una décima).
+          examples: [6]
+        pendingHours:
+          type: number
+          minimum: 0
+          multipleOf: 0.1
+          description: Suma de horas `PENDING` del abogado (decimal con una décima).
+          examples: [2]
+    DashboardSummary:
+      type: object
+      additionalProperties: false
+      description: |
+        Resumen del tablero para la ventana efectiva `[from, to]` (inclusiva). `byMatter` ordenado
+        por `matterCode` ascendente y `byLawyer` por `lawyerName` ascendente; solo filas con horas
+        contadas, salvo la fila propia del `LAWYER`.
+      required: [from, to, totals, byMatter, byLawyer]
+      properties:
+        from:
+          type: string
+          format: date
+          description: Primer día de la ventana efectiva (inclusivo).
+          examples: ['2026-10-09']
+        to:
+          type: string
+          format: date
+          description: Último día de la ventana efectiva (inclusivo).
+          examples: ['2026-11-07']
+        totals:
+          $ref: '#/components/schemas/HoursTotals'
+        byMatter:
+          type: array
+          description: Una fila por asunto con horas contadas; vacía si no hay horas.
+          items:
+            $ref: '#/components/schemas/MatterHoursRow'
+        byLawyer:
+          type: array
+          description: |
+            Una fila por abogado con horas contadas (`PARTNER`; vacía si no hay horas) o exactamente
+            la fila propia (`LAWYER`).
+          items:
+            $ref: '#/components/schemas/LawyerHoursRow'

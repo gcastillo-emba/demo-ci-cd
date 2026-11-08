@@ -30,6 +30,10 @@ export function Layout({ children }: { children: ReactNode }) {
                   <li>
                     <NavLink to="/asuntos">Asuntos</NavLink>
                   </li>
+                  {/* C3 — "Tablero" para PARTNER y LAWYER (spec "Pantalla Tablero"). */}
+                  <li>
+                    <NavLink to="/tablero">Tablero</NavLink>
+                  </li>
                   {/* Navegación por rol (spec "Pantalla Registrar horas" y "Pantalla Aprobaciones"). */}
                   {user.role === 'LAWYER' ? (
                     <>
